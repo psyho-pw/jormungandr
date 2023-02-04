@@ -37,7 +37,7 @@ export class SlackService {
 
         this.#slackBotApp
             .start()
-            .then(() => this.logger.info('slackBot instance initialized'))
+            .then(() => this.logger.info('SlackBot instance initialized'))
             .catch(error => this.logger.error('error caught', error))
     }
 
@@ -46,5 +46,12 @@ export class SlackService {
         if (!response.ok) throw new HttpException({message: 'slack api error'}, HttpStatus.BAD_GATEWAY)
 
         return response.channels
+    }
+
+    async findUsers() {
+        const response = await this.#slackBotApp.client.apiCall('users.list')
+        if (!response.ok) throw new HttpException({message: 'slack api error'}, HttpStatus.BAD_GATEWAY)
+
+        return response.members
     }
 }

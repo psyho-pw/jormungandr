@@ -66,7 +66,7 @@ export class SlackService {
         private readonly discordService: DiscordService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
-        const config = configService.getSlackConfig()
+        const config = this.configService.getSlackConfig()
 
         this.#slackBotInstance = new App({
             appToken: config.APP_TOKEN,

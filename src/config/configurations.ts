@@ -62,6 +62,9 @@ export const configurations = (): Configurations => {
             APP_TOKEN: process.env.SLACK_APP_TOKEN || '',
             TOKEN: process.env.SLACK_TOKEN || '',
         },
+        DISCORD: {
+            WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL || '',
+        },
         AUTH: {
             GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
         },

@@ -1,4 +1,4 @@
-import {SlackConfig} from './../types/index'
+import {DiscordConfig, SlackConfig} from './../types/index'
 import {Injectable} from '@nestjs/common'
 import {ConfigService} from '@nestjs/config'
 import {AppConfig, AuthConfig, AwsConfig, Configurations, DBConfig, ServerConfig} from 'src/types'
@@ -25,6 +25,10 @@ export class AppConfigService {
 
     getSlackConfig(): SlackConfig {
         return this.configService.getOrThrow('SLACK')
+    }
+
+    getDiscordConfig(): DiscordConfig {
+        return this.configService.getOrThrow('DISCORD')
     }
 
     getServerConfig(): ServerConfig {

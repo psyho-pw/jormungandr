@@ -33,4 +33,4 @@ async function bootstrap() {
     await app.listen(appConfig.PORT)
 }
 
-bootstrap().then(() => Logger.log(`[${process.env.NODE_ENV}] Listening on port ${process.env.PORT}`))
+bootstrap().then(() => Logger.verbose(`[${process.env.NODE_ENV}] Listening on port ${process.env.PORT}`))

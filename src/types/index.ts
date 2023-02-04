@@ -28,6 +28,10 @@ export interface SlackConfig {
     TOKEN: string
 }
 
+export interface DiscordConfig {
+    WEBHOOK_URL: string
+}
+
 export interface AuthConfig {
     GOOGLE_CLIENT_ID?: string
 }
@@ -47,6 +51,7 @@ export interface Configurations {
     SERVER: ServerConfig
     DB: DBConfig
     SLACK: SlackConfig
+    DISCORD: DiscordConfig
     AUTH: AuthConfig
     AWS: AwsConfig
     FRONT: Front

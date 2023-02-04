@@ -36,6 +36,7 @@ export class SlackService {
         // })
 
         this.#slackBotInstance.event('message', async ({message, say, client, event}) => {
+            console.log(message)
             const {members: totalMembers} = await client.users.list()
             if (!totalMembers) {
                 this.sendSlackApiError(new Error('total members fetch error'))

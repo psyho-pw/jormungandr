@@ -7,7 +7,6 @@ export const configurations = (): Configurations => {
 
     const originWhiteList: string[] = JSON.parse(process.env.ORIGIN_WHITELIST || '[]')
 
-    const DB_URI = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_CLUSTER}.${process.env.DB_PROJECT}.mongodb.net`
     return {
         APP: {
             NAME: pkg.name,
@@ -55,8 +54,14 @@ export const configurations = (): Configurations => {
             },
         },
         DB: {
-            URI: DB_URI,
-            DATABASE: process.env.DB_DATABASE || 'NONE',
+            type: 'mariadb',
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_DATABASE,
+            synchronize: process.env.NODE_ENV === 'development',
+            dropSchema: false,
         },
         SLACK: {
             APP_TOKEN: process.env.SLACK_APP_TOKEN || '',

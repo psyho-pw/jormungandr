@@ -1,6 +1,7 @@
 import {CorsOptions} from '@nestjs/common/interfaces/external/cors-options.interface'
 import {SessionOptions} from 'express-session'
 import {Request as ExpressRequest} from 'express'
+import {TypeOrmModuleOptions} from '@nestjs/typeorm'
 
 export interface AppConfig {
     NAME: string
@@ -18,10 +19,7 @@ export interface ServerConfig {
     CORS: CorsOptions
 }
 
-export interface DBConfig {
-    URI: string
-    DATABASE: string
-}
+export type DBConfig = TypeOrmModuleOptions
 
 export interface SlackConfig {
     APP_TOKEN: string

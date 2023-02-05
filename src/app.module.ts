@@ -15,6 +15,7 @@ import {SlackModule} from './slack/slack.module'
 import {TypeOrmModule} from '@nestjs/typeorm'
 import {DataSource} from 'typeorm'
 import {APP_INTERCEPTOR} from '@nestjs/core'
+import {addTransactionalDataSource} from 'typeorm-transactional'
 
 @Module({
     imports: [
@@ -31,7 +32,9 @@ import {APP_INTERCEPTOR} from '@nestjs/core'
     providers: [AppService, {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor}],
 })
 export class AppModule implements NestModule {
-    constructor(private dataSource: DataSource) {}
+    constructor(private dataSource: DataSource) {
+        addTransactionalDataSource(this.dataSource)
+    }
 
     configure(consumer: MiddlewareConsumer): void {
         consumer.apply(LoggerMiddleware).forRoutes('/')

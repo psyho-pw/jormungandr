@@ -1,11 +1,29 @@
 import {Injectable} from '@nestjs/common'
+import {InjectRepository} from '@nestjs/typeorm'
+import {Repository} from 'typeorm'
+import {Transactional} from 'typeorm-transactional'
 import {CreateMessageDto} from './dto/create-message.dto'
 import {UpdateMessageDto} from './dto/update-message.dto'
+import {Message} from './entities/message.entity'
 
 @Injectable()
 export class MessageService {
-    create(createMessageDto: CreateMessageDto) {
-        return 'This action adds a new message'
+    constructor(@InjectRepository(Message) private messageRepository: Repository<Message>) {}
+
+    @Transactional()
+    async create(createMessageDto: CreateMessageDto) {
+        const message = new Message(
+            createMessageDto.messageId,
+            createMessageDto.type,
+            createMessageDto.textContent,
+            createMessageDto.userId,
+            createMessageDto.timestamp,
+            createMessageDto.channelId,
+            createMessageDto.channelType,
+        )
+
+        const res = await this.messageRepository.save(message)
+        return res
     }
 
     findAll() {
@@ -17,6 +35,7 @@ export class MessageService {
     }
 
     update(id: number, updateMessageDto: UpdateMessageDto) {
+        console.log(updateMessageDto)
         return `This action updates a #${id} message`
     }
 

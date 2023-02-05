@@ -62,6 +62,7 @@ export const configs = (): Configs => {
             database: process.env.DB_DATABASE,
             synchronize: process.env.NODE_ENV === 'development',
             dropSchema: false,
+            logging: process.env.NODE_ENV === 'development',
         },
         SLACK: {
             APP_TOKEN: process.env.SLACK_APP_TOKEN || '',

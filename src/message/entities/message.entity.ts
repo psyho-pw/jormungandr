@@ -14,7 +14,7 @@ export class Message extends AbstractActorEntity {
     textContent: string
 
     @ManyToOne(() => User)
-    userId: User
+    user: number
 
     @Column()
     timestamp: string
@@ -23,11 +23,22 @@ export class Message extends AbstractActorEntity {
     @Column()
     channelId: string
 
-    @Column()
+    @Column({nullable: true})
     channelName: string
 
     @Column()
     channelType: string
+
+    constructor(messageId: string, type: string, textContent: string, userId: number, timestamp: string, channelId: string, channelType: string) {
+        super()
+        this.messageId = messageId
+        this.type = type
+        this.textContent = textContent
+        this.user = userId
+        this.timestamp = timestamp
+        this.channelId = channelId
+        this.channelType = channelType
+    }
 }
 
 // Example

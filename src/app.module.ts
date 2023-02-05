@@ -1,3 +1,4 @@
+import {ErrorInterceptor} from './interceptors/error.interceptor'
 import {MessageModule} from './modules/message/message.module'
 import {UserModule} from './modules/user/user.module'
 import {TypeormConfigService} from './configServices/typeorm.config.service'
@@ -13,6 +14,7 @@ import {LoggerMiddleware} from './middlewares/logger.middleware'
 import {SlackModule} from './modules/slack/slack.module'
 import {TypeOrmModule} from '@nestjs/typeorm'
 import {DataSource} from 'typeorm'
+import {APP_INTERCEPTOR} from '@nestjs/core'
 
 @Module({
     imports: [
@@ -26,7 +28,7 @@ import {DataSource} from 'typeorm'
         MessageModule,
     ],
     controllers: [AppController],
-    providers: [AppService],
+    providers: [AppService, {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor}],
 })
 export class AppModule implements NestModule {
     constructor(private dataSource: DataSource) {}

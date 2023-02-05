@@ -1,4 +1,4 @@
-import {DiscordService} from './../discord/discord.service'
+import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {HttpException, HttpStatus, Inject, Injectable} from '@nestjs/common'
 import {App} from '@slack/bolt'
@@ -36,6 +36,7 @@ export class SlackService {
         // })
 
         this.#slackBotInstance.event('message', async ({message, say, client, event}) => {
+            console.log(message)
             const {members: totalMembers} = await client.users.list()
             if (!totalMembers) {
                 this.sendSlackApiError(new Error('total members fetch error'))

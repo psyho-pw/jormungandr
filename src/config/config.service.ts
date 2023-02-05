@@ -1,13 +1,13 @@
-import {DiscordConfig, SlackConfig} from './../types/index'
+import {DiscordConfig, SlackConfig} from './config.type'
 import {Injectable} from '@nestjs/common'
 import {ConfigService} from '@nestjs/config'
-import {AppConfig, AuthConfig, AwsConfig, Configurations, DBConfig, ServerConfig} from 'src/types'
+import {AppConfig, AuthConfig, AwsConfig, Configs, DBConfig, ServerConfig} from 'src/config/config.type'
 
 @Injectable()
 export class AppConfigService {
-    constructor(private readonly configService: ConfigService<Configurations>) {}
+    constructor(private readonly configService: ConfigService<Configs>) {}
 
-    get(propertyPath: keyof Configurations) {
+    get(propertyPath: keyof Configs) {
         return this.configService.get(propertyPath)
     }
 

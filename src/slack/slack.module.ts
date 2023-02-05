@@ -1,5 +1,5 @@
-import {DiscordModule} from './../discord/discord.module'
-import {AppConfigModule} from './../../config/config.module'
+import {DiscordModule} from '../discord/discord.module'
+import {AppConfigModule} from '../config/config.module'
 import {Module} from '@nestjs/common'
 import {SlackService} from './slack.service'
 import {SlackController} from './slack.controller'

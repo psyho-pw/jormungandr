@@ -14,7 +14,7 @@ export class CronService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
-    static slackFetchSchedule = '10 * * * * *'
+    static slackFetchSchedule = '0 0 * * * 1-5'
 
     @Cron(CronService.slackFetchSchedule)
     public async fetchSlackInfo() {

@@ -1,4 +1,4 @@
-import {DiscordService} from './../discord/discord.service'
+import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {HttpException, HttpStatus, Inject, Injectable} from '@nestjs/common'
 import {App} from '@slack/bolt'

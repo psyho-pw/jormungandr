@@ -9,7 +9,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
     createTypeOrmOptions(): TypeOrmModuleOptions | Promise<TypeOrmModuleOptions> {
         return {
             ...this.configService.getDBConfig(),
-            entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+            entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
             dropSchema: true,
         }
     }

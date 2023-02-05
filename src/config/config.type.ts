@@ -44,7 +44,7 @@ export interface Front {
     FRONT_URL: string
 }
 
-export interface Configurations {
+export interface Configs {
     APP: AppConfig
     SERVER: ServerConfig
     DB: DBConfig

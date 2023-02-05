@@ -1,8 +1,8 @@
 import pkg from '../../package.json'
-import {Configurations} from '../types'
+import {Configs} from './config.type'
 import micromatch from 'micromatch'
 
-export const configurations = (): Configurations => {
+export const configs = (): Configs => {
     const currentEnv = process.env.NODE_ENV || 'local'
 
     const originWhiteList: string[] = JSON.parse(process.env.ORIGIN_WHITELIST || '[]')

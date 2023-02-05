@@ -3,7 +3,7 @@ import {Observable, throwError} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {DiscordService} from '../modules/discord/discord.service'
+import {DiscordService} from '../../discord/discord.service'
 
 @Injectable()
 export class ErrorInterceptor implements NestInterceptor {

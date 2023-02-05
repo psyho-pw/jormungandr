@@ -1,4 +1,4 @@
-import type {User} from 'src/modules/user/entities/user.entity'
+import type {User} from 'src/user/entities/user.entity'
 import {CreateDateColumn, DeleteDateColumn, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Relation, UpdateDateColumn} from 'typeorm'
 
 export abstract class AbstractEntity {

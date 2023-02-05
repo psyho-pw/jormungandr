@@ -1,5 +1,6 @@
 import {AbstractEntity} from 'src/common/abstract.entity'
-import {Column, Entity, Index} from 'typeorm'
+import {Team} from 'src/team/entities/team.entity'
+import {Column, Entity, Index, ManyToOne} from 'typeorm'
 
 @Entity()
 export class User extends AbstractEntity {
@@ -8,8 +9,8 @@ export class User extends AbstractEntity {
     slackId: string
 
     @Index()
-    @Column()
-    teamId: string
+    @ManyToOne(() => Team)
+    team: Team
 
     @Column()
     name: string
@@ -23,14 +24,10 @@ export class User extends AbstractEntity {
     @Column()
     timeZone: string
 
-    constructor(slackId: string, teamId: string, name: string, realName: string, phone: string | null, timeZone: string) {
-        super()
-        this.slackId = slackId
-        this.teamId = teamId
-        this.name = name
-        this.realName = realName
-        this.phone = phone
-        this.timeZone = timeZone
+    public setTeam(id: number) {
+        const team = new Team()
+        team.id = id
+        this.team = team
     }
 }
 

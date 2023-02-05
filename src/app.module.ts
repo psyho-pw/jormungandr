@@ -17,6 +17,8 @@ import {TypeOrmModule} from '@nestjs/typeorm'
 import {DataSource} from 'typeorm'
 import {APP_INTERCEPTOR} from '@nestjs/core'
 import {addTransactionalDataSource} from 'typeorm-transactional'
+import { ChannelModule } from './channel/channel.module';
+import { TeamModule } from './team/team.module';
 
 @Module({
     imports: [
@@ -29,6 +31,8 @@ import {addTransactionalDataSource} from 'typeorm-transactional'
         DiscordModule,
         UserModule,
         MessageModule,
+        ChannelModule,
+        TeamModule,
     ],
     controllers: [AppController],
     providers: [AppService, {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor}],

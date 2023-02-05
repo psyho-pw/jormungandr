@@ -14,15 +14,15 @@ export class CronService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
-    @Cron('10 * * * * *')
-    public async fetchSlackTeamUsers() {
-        await this.slackService.fetchUsers()
-        this.logger.verbose('Slack users fetched')
-    }
+    static slackFetchSchedule = '10 * * * * *'
 
-    @Cron('10 * * * * *')
-    public async fetchSlackTeamChannels() {
-        console.log(this.fetchSlackTeamChannels.name)
+    @Cron(CronService.slackFetchSchedule)
+    public async fetchSlackInfo() {
+        await this.slackService.fetchTeams()
+        await this.slackService.fetchChannels()
+        await this.slackService.fetchUsers()
+
+        this.logger.verbose('Slack data fetched')
     }
 
     public dynamicTaskExecution() {

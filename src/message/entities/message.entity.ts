@@ -1,4 +1,6 @@
+import {Channel} from 'src/channel/entities/channel.entity'
 import {AbstractActorEntity} from 'src/common/abstract.entity'
+import {Team} from 'src/team/entities/team.entity'
 import {User} from 'src/user/entities/user.entity'
 import {Column, Entity, Index, ManyToOne} from 'typeorm'
 
@@ -16,14 +18,14 @@ export class Message extends AbstractActorEntity {
 
     @Index()
     @ManyToOne(() => User)
-    user: number
+    user: User
 
     @Column()
     timestamp: string
 
     @Index()
-    @Column()
-    channelId: string
+    @ManyToOne(() => Channel)
+    channel: Channel
 
     @Column({nullable: true})
     channelName: string
@@ -32,19 +34,25 @@ export class Message extends AbstractActorEntity {
     channelType: string
 
     @Index()
-    @Column()
-    teamId: string
+    @ManyToOne(() => Team)
+    team: Team
 
-    constructor(messageId: string, type: string, textContent: string, userId: number, timestamp: string, channelId: string, channelType: string, teamId: string) {
-        super()
-        this.messageId = messageId
-        this.type = type
-        this.textContent = textContent
-        this.user = userId
-        this.timestamp = timestamp
-        this.channelId = channelId
-        this.channelType = channelType
-        this.teamId = teamId
+    public setUser(userId: number) {
+        const user = new User()
+        user.id = userId
+        this.user = user
+    }
+
+    public setChannel(channelId: number) {
+        const channel = new Channel()
+        channel.id = channelId
+        this.channel = channel
+    }
+
+    public setTeam(teamId: number) {
+        const team = new Team()
+        team.id = teamId
+        this.team = team
     }
 }
 

@@ -13,30 +13,38 @@ export class UserService {
 
     @Transactional()
     create(createUserDto: CreateUserDto) {
-        const user = new User(createUserDto.slackId, createUserDto.teamId, createUserDto.name, createUserDto.realName, createUserDto.phone, createUserDto.timeZone)
+        const user = new User()
+        user.slackId = createUserDto.slackId
+        user.setTeam(createUserDto.teamId)
+        user.name = createUserDto.name
+        user.realName = createUserDto.realName
+        user.phone = createUserDto.phone
+        user.timeZone = createUserDto.timeZone
         return this.userRepository.save(user)
     }
 
     @Transactional()
-    findAll() {
+    findAll(): Promise<User[]> {
         return this.userRepository.find({order: {id: 'DESC'}})
     }
 
     @Transactional()
-    async findBySlackUserId(id: string): Promise<User> {
-        const [user] = await this.userRepository.findBy({slackId: id})
-        return user
+    async findBySlackId(id: string): Promise<User | null> {
+        return await this.userRepository.findOneBy({slackId: id})
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} user`
+    @Transactional()
+    findOne(id: number): Promise<User | null> {
+        return this.userRepository.findOneBy({id})
     }
 
+    @Transactional()
     update(id: number, updateUserDto: UpdateUserDto) {
         console.log(updateUserDto)
         return `This action updates a #${id} user`
     }
 
+    @Transactional()
     remove(id: number) {
         return `This action removes a #${id} user`
     }

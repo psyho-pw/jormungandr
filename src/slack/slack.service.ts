@@ -1,3 +1,5 @@
+import {ChannelService} from './../channel/channel.service'
+import {TeamService} from './../team/team.service'
 import {MessageService} from './../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
@@ -15,6 +17,8 @@ export class SlackService {
     constructor(
         private readonly configService: AppConfigService,
         private readonly userService: UserService,
+        private readonly teamService: TeamService,
+        private readonly channelService: ChannelService,
         private readonly messageService: MessageService,
         private readonly discordService: DiscordService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
@@ -64,16 +68,11 @@ export class SlackService {
             if (message.subtype) return
 
             const genericMessage = message as GenericMessageEvent
-            console.log(genericMessage)
-
             const teamId = context.teamId
             if (!teamId) {
                 this.logger.info('team not found')
                 return
             }
-            // console.log({channelId: message.channel, channelType: message.channel_type, teamId})
-
-            await this.onMessage(genericMessage, teamId)
 
             const channelMembersResponse = await client.conversations.members({channel: message.channel})
             if (!channelMembersResponse.ok) {
@@ -81,7 +80,7 @@ export class SlackService {
                 return
             }
             const channelMembers = channelMembersResponse.members || []
-            console.log(channelMembers)
+            await this.onMessage(genericMessage, teamId, channelMembers)
         })
     }
 
@@ -90,11 +89,17 @@ export class SlackService {
     }
 
     @Transactional()
-    private async onMessage(message: GenericMessageEvent, teamId: string) {
+    private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
         //TODO channel name retrieve 방법 - cron
         const slackUserId = message.user
-        const user = await this.userService.findBySlackUserId(slackUserId)
-        if (!user) this.sendSlackApiError(new Error(`user not found`))
+        const user = await this.userService.findBySlackId(slackUserId)
+        if (!user) {
+            this.sendSlackApiError(new Error(`user not found`))
+            return
+        }
+
+        const channel = await this.channelService.findBySlackId(message.channel)
+        const team = await this.teamService.findBySlackId(teamId)
 
         await this.messageService.create({
             messageId: message.client_msg_id || '',
@@ -102,13 +107,68 @@ export class SlackService {
             textContent: message.text || '',
             userId: user.id,
             timestamp: message.ts,
-            channelId: message.channel,
+            channelId: channel.id,
             channelName: '',
             channelType: message.channel_type,
-            teamId,
+            teamId: team.id,
         })
 
         //TODO 채널 멤버들의 reaction 일괄 생성
+    }
+
+    @Transactional()
+    public async fetchTeams() {
+        //TODO fetch teams
+        const response = await this.#slackBotInstance.client.team.info()
+        if (!response.ok || !response.team || !response.team.id) {
+            this.sendSlackApiError(new Error(`slack api error - ${this.fetchTeams.name}`))
+            return
+        }
+        const check = await this.teamService.findBySlackId(response.team.id)
+        if (check) {
+            //TODO update user when info mismatches
+            return
+        }
+        await this.teamService.create({
+            teamId: response.team.id,
+            name: response.team.name || '',
+            url: response.team.url || '',
+            domain: response.team.domain || '',
+        })
+    }
+
+    @Transactional()
+    public async fetchChannels() {
+        //TODO fetch channels
+        const response = await this.#slackBotInstance.client.conversations.list()
+        if (!response.ok || !response.channels) {
+            this.sendSlackApiError(new Error(`slack api error - ${this.fetchChannels.name}`))
+            return
+        }
+
+        for (const channel of response.channels) {
+            if (!channel.id || !channel.is_channel) {
+                this.logger.error('channel is not qualified', channel)
+                continue
+            }
+
+            const check = await this.channelService.findBySlackId(channel.id)
+
+            if (check) {
+                //TODO update user when info mismatches
+                continue
+            }
+
+            const team = await this.teamService.findBySlackId(channel.context_team_id || '')
+
+            await this.channelService.create({
+                channelId: channel.id,
+                name: channel.name || '',
+                teamId: team.id,
+            })
+        }
+
+        return response.channels
     }
 
     @Transactional()
@@ -125,41 +185,21 @@ export class SlackService {
                 continue
             }
 
-            const check = await this.userService.findBySlackUserId(user.id)
+            const check = await this.userService.findBySlackId(user.id)
             if (check) {
                 //TODO update user when info mismatches
                 continue
             }
 
+            const team = await this.teamService.findBySlackId(user.team_id || '')
             await this.userService.create({
                 slackId: user.id,
-                teamId: user.team_id || '',
+                teamId: team.id,
                 name: user.name || '',
                 realName: user.real_name || '',
                 phone: user.profile?.phone || null,
                 timeZone: user.tz || '',
             })
         }
-    }
-
-    @Transactional()
-    public fetchTeams() {
-        //TODO fetch teams
-        console.log('TODO')
-    }
-
-    @Transactional()
-    public async fetchChannels() {
-        //TODO fetch channels
-        const response = await this.#slackBotInstance.client.conversations.list()
-        if (!response.ok || !response.channels) {
-            this.sendSlackApiError(new Error(`slack api error - ${this.fetchChannels.name}`))
-            return
-        }
-
-        for (const channel of response.channels) {
-        }
-
-        return response.channels
     }
 }

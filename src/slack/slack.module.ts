@@ -1,3 +1,5 @@
+import {ChannelModule} from './../channel/channel.module'
+import {TeamModule} from './../team/team.module'
 import {MessageModule} from 'src/message/message.module'
 import {DiscordModule} from '../discord/discord.module'
 import {AppConfigModule} from '../config/config.module'
@@ -7,7 +9,7 @@ import {SlackController} from './slack.controller'
 import {UserModule} from 'src/user/user.module'
 
 @Module({
-    imports: [AppConfigModule, DiscordModule, UserModule, MessageModule],
+    imports: [AppConfigModule, DiscordModule, UserModule, TeamModule, ChannelModule, MessageModule],
     providers: [SlackService],
     exports: [SlackService],
     controllers: [SlackController],

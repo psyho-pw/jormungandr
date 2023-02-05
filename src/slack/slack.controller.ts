@@ -5,6 +5,11 @@ import {SlackService} from './slack.service'
 export class SlackController {
     constructor(private readonly slackService: SlackService) {}
 
+    @Get('/teams')
+    findTeams() {
+        return this.slackService.fetchTeams()
+    }
+
     @Get('/channels')
     findChannels() {
         return this.slackService.fetchChannels()

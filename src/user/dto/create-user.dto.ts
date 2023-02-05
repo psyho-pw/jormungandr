@@ -1,11 +1,11 @@
-import {IsOptional, IsString} from 'class-validator'
+import {IsNumber, IsOptional, IsString} from 'class-validator'
 
 export class CreateUserDto {
     @IsString()
     slackId: string
 
-    @IsString()
-    teamId: string
+    @IsNumber()
+    teamId: number
 
     @IsString()
     name: string

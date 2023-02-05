@@ -4,6 +4,7 @@ import {Column, Entity, Index, ManyToOne} from 'typeorm'
 
 @Entity()
 export class Message extends AbstractActorEntity {
+    @Index()
     @Column()
     messageId: string
 
@@ -13,6 +14,7 @@ export class Message extends AbstractActorEntity {
     @Column({type: 'text'})
     textContent: string
 
+    @Index()
     @ManyToOne(() => User)
     user: number
 
@@ -29,6 +31,7 @@ export class Message extends AbstractActorEntity {
     @Column()
     channelType: string
 
+    @Index()
     @Column()
     teamId: string
 

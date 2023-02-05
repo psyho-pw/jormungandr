@@ -11,34 +11,37 @@ export class MessageService {
     constructor(@InjectRepository(Message) private messageRepository: Repository<Message>) {}
 
     @Transactional()
-    async create(createMessageDto: CreateMessageDto) {
-        const message = new Message(
-            createMessageDto.messageId,
-            createMessageDto.type,
-            createMessageDto.textContent,
-            createMessageDto.userId,
-            createMessageDto.timestamp,
-            createMessageDto.channelId,
-            createMessageDto.channelType,
-        )
+    async create(createMessageDto: CreateMessageDto): Promise<Message> {
+        const message = new Message()
 
-        const res = await this.messageRepository.save(message)
-        return res
+        message.messageId = createMessageDto.messageId
+        message.type = createMessageDto.type
+        message.textContent = createMessageDto.textContent
+        message.timestamp = createMessageDto.timestamp
+        message.channelType = createMessageDto.channelType
+        message.setTeam(createMessageDto.teamId)
+        message.setChannel(createMessageDto.channelId)
+        message.setUser(createMessageDto.userId)
+        return this.messageRepository.save(message)
     }
 
-    findAll() {
-        return `This action returns all message`
+    @Transactional()
+    findAll(): Promise<Message[]> {
+        return this.messageRepository.find({order: {id: 'DESC'}})
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} message`
+    @Transactional()
+    findOne(id: number): Promise<Message | null> {
+        return this.messageRepository.findOneBy({id})
     }
 
+    @Transactional()
     update(id: number, updateMessageDto: UpdateMessageDto) {
         console.log(updateMessageDto)
         return `This action updates a #${id} message`
     }
 
+    @Transactional()
     remove(id: number) {
         return `This action removes a #${id} message`
     }

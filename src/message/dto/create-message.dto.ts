@@ -16,12 +16,15 @@ export class CreateMessageDto {
     @IsString()
     timestamp: string
 
-    @IsString()
-    channelId: string
+    @IsNumber()
+    channelId: number
 
     @IsString()
     channelName: string
 
     @IsString()
     channelType: string
+
+    @IsNumber()
+    teamId: number
 }

@@ -12,48 +12,39 @@ export class UserService {
     constructor(@InjectRepository(User) private userRepository: Repository<User>, private readonly messageService: MessageService) {}
 
     @Transactional()
-    async create(createUserDto: CreateUserDto) {
-        const user = new User(createUserDto.slackId, createUserDto.teamId, createUserDto.name, createUserDto.realName, createUserDto.phone, createUserDto.timeZone)
-        const res = await this.userRepository.save(user)
-
-        await this.messageService.create({
-            messageId: 'a4904a20-417b-4870-9c9b-300fdabc5120',
-            type: 'message',
-            textContent: 'test',
-            userId: res.id,
-            timestamp: '1675539594.356439',
-            channelId: 'C04N52W7HCL',
-            channelName: '',
-            channelType: 'channel',
-        })
-
-        return res
+    create(createUserDto: CreateUserDto) {
+        const user = new User()
+        user.slackId = createUserDto.slackId
+        user.setTeam(createUserDto.teamId)
+        user.name = createUserDto.name
+        user.realName = createUserDto.realName
+        user.phone = createUserDto.phone
+        user.timeZone = createUserDto.timeZone
+        return this.userRepository.save(user)
     }
 
     @Transactional()
-    async findAll() {
-        await this.messageService.create({
-            messageId: 'a4904a20-417b-4870-9c9b-300fdabc5120',
-            type: 'message',
-            textContent: 'test',
-            userId: 1,
-            timestamp: '1675539594.356439',
-            channelId: 'C04N52W7HCAL',
-            channelName: '',
-            channelType: 'channel',
-        })
+    findAll(): Promise<User[]> {
         return this.userRepository.find({order: {id: 'DESC'}})
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} user`
+    @Transactional()
+    async findBySlackId(id: string): Promise<User | null> {
+        return await this.userRepository.findOneBy({slackId: id})
     }
 
+    @Transactional()
+    findOne(id: number): Promise<User | null> {
+        return this.userRepository.findOneBy({id})
+    }
+
+    @Transactional()
     update(id: number, updateUserDto: UpdateUserDto) {
         console.log(updateUserDto)
         return `This action updates a #${id} user`
     }
 
+    @Transactional()
     remove(id: number) {
         return `This action removes a #${id} user`
     }

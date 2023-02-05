@@ -30,7 +30,18 @@ export class UserService {
         return res
     }
 
-    findAll() {
+    @Transactional()
+    async findAll() {
+        await this.messageService.create({
+            messageId: 'a4904a20-417b-4870-9c9b-300fdabc5120',
+            type: 'message',
+            textContent: 'test',
+            userId: 1,
+            timestamp: '1675539594.356439',
+            channelId: 'C04N52W7HCAL',
+            channelName: '',
+            channelType: 'channel',
+        })
         return this.userRepository.find({order: {id: 'DESC'}})
     }
 

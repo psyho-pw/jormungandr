@@ -19,7 +19,7 @@ export class Message extends AbstractActorEntity {
     @Column()
     timestamp: string
 
-    @Index({unique: true})
+    @Index()
     @Column()
     channelId: string
 
@@ -29,7 +29,10 @@ export class Message extends AbstractActorEntity {
     @Column()
     channelType: string
 
-    constructor(messageId: string, type: string, textContent: string, userId: number, timestamp: string, channelId: string, channelType: string) {
+    @Column()
+    teamId: string
+
+    constructor(messageId: string, type: string, textContent: string, userId: number, timestamp: string, channelId: string, channelType: string, teamId: string) {
         super()
         this.messageId = messageId
         this.type = type
@@ -38,6 +41,7 @@ export class Message extends AbstractActorEntity {
         this.timestamp = timestamp
         this.channelId = channelId
         this.channelType = channelType
+        this.teamId = teamId
     }
 }
 

@@ -20,6 +20,7 @@ export class MessageService {
             createMessageDto.timestamp,
             createMessageDto.channelId,
             createMessageDto.channelType,
+            createMessageDto.teamId,
         )
 
         const res = await this.messageRepository.save(message)

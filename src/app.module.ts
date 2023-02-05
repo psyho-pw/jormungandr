@@ -1,4 +1,5 @@
 import {ErrorInterceptor} from './common/interceptors/error.interceptor'
+import {CronModule} from './cron/cron.module'
 import {MessageModule} from './message/message.module'
 import {UserModule} from './user/user.module'
 import {TypeormConfigService} from './common/configServices/typeorm.config.service'
@@ -22,6 +23,7 @@ import {addTransactionalDataSource} from 'typeorm-transactional'
         AppConfigModule,
         TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
         WinstonModule.forRootAsync({useClass: WinstonConfigService}),
+        CronModule,
         AdminModule,
         SlackModule,
         DiscordModule,

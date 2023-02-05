@@ -24,4 +24,7 @@ export class CreateMessageDto {
 
     @IsString()
     channelType: string
+
+    @IsString()
+    teamId: string
 }

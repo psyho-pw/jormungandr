@@ -17,13 +17,13 @@ export class User extends AbstractEntity {
     @Column()
     realName: string
 
-    @Column()
-    phone: string
+    @Column({type: String, nullable: true})
+    phone!: string | null
 
     @Column()
     timeZone: string
 
-    constructor(slackId: string, teamId: string, name: string, realName: string, phone: string, timeZone: string) {
+    constructor(slackId: string, teamId: string, name: string, realName: string, phone: string | null, timeZone: string) {
         super()
         this.slackId = slackId
         this.teamId = teamId

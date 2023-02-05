@@ -7,11 +7,11 @@ export class SlackController {
 
     @Get('/channels')
     findChannels() {
-        return this.slackService.findChannels()
+        return this.slackService.fetchChannels()
     }
 
     @Get('/users')
     findUsers() {
-        return this.slackService.findUsers()
+        return this.slackService.fetchUsers()
     }
 }

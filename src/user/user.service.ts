@@ -12,37 +12,20 @@ export class UserService {
     constructor(@InjectRepository(User) private userRepository: Repository<User>, private readonly messageService: MessageService) {}
 
     @Transactional()
-    async create(createUserDto: CreateUserDto) {
+    create(createUserDto: CreateUserDto) {
         const user = new User(createUserDto.slackId, createUserDto.teamId, createUserDto.name, createUserDto.realName, createUserDto.phone, createUserDto.timeZone)
-        const res = await this.userRepository.save(user)
-
-        await this.messageService.create({
-            messageId: 'a4904a20-417b-4870-9c9b-300fdabc5120',
-            type: 'message',
-            textContent: 'test',
-            userId: res.id,
-            timestamp: '1675539594.356439',
-            channelId: 'C04N52W7HCL',
-            channelName: '',
-            channelType: 'channel',
-        })
-
-        return res
+        return this.userRepository.save(user)
     }
 
     @Transactional()
-    async findAll() {
-        await this.messageService.create({
-            messageId: 'a4904a20-417b-4870-9c9b-300fdabc5120',
-            type: 'message',
-            textContent: 'test',
-            userId: 1,
-            timestamp: '1675539594.356439',
-            channelId: 'C04N52W7HCAL',
-            channelName: '',
-            channelType: 'channel',
-        })
+    findAll() {
         return this.userRepository.find({order: {id: 'DESC'}})
+    }
+
+    @Transactional()
+    async findBySlackUserId(id: string): Promise<User> {
+        const [user] = await this.userRepository.findBy({slackId: id})
+        return user
     }
 
     findOne(id: number) {

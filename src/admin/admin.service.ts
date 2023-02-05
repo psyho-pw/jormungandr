@@ -12,7 +12,6 @@ export class AdminService {
     }
 
     findAll() {
-        this.slackService.findChannels()
         return `This action returns all admin`
     }
 

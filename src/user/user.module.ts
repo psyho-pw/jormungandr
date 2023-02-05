@@ -9,5 +9,6 @@ import {MessageModule} from 'src/message/message.module'
     imports: [TypeOrmModule.forFeature([User]), MessageModule],
     controllers: [UserController],
     providers: [UserService],
+    exports: [UserService],
 })
 export class UserModule {}

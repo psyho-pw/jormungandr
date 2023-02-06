@@ -19,6 +19,7 @@ import {APP_INTERCEPTOR} from '@nestjs/core'
 import {addTransactionalDataSource} from 'typeorm-transactional'
 import { ChannelModule } from './channel/channel.module';
 import { TeamModule } from './team/team.module';
+import { RespondModule } from './respond/respond.module';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { TeamModule } from './team/team.module';
         MessageModule,
         ChannelModule,
         TeamModule,
+        RespondModule,
     ],
     controllers: [AppController],
     providers: [AppService, {provide: APP_INTERCEPTOR, useClass: ErrorInterceptor}],

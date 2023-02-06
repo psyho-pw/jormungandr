@@ -30,7 +30,7 @@ export class DiscordService {
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.#getCredentials()
-            .then(() => this.logger.verbose('✅ DiscordModule instance initialized'))
+            .then(() => this.logger.verbose('✅  DiscordModule instance initialized'))
             .catch(error => this.logger.error('error caught', error))
     }
 

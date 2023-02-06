@@ -36,6 +36,11 @@ export class MessageService {
     }
 
     @Transactional()
+    findByTimestamp(timestamp: string): Promise<Message | null> {
+        return this.messageRepository.findOneBy({timestamp})
+    }
+
+    @Transactional()
     update(id: number, updateMessageDto: UpdateMessageDto) {
         console.log(updateMessageDto)
         return `This action updates a #${id} message`

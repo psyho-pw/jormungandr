@@ -1,11 +1,11 @@
 import {Channel} from 'src/channel/entities/channel.entity'
-import {AbstractActorEntity} from 'src/common/abstract.entity'
+import {AbstractEntity} from 'src/common/abstract.entity'
 import {Team} from 'src/team/entities/team.entity'
 import {User} from 'src/user/entities/user.entity'
 import {Column, Entity, Index, ManyToOne} from 'typeorm'
 
 @Entity()
-export class Message extends AbstractActorEntity {
+export class Message extends AbstractEntity {
     @Index()
     @Column()
     messageId: string
@@ -20,15 +20,13 @@ export class Message extends AbstractActorEntity {
     @ManyToOne(() => User)
     user: User
 
+    @Index()
     @Column()
     timestamp: string
 
     @Index()
     @ManyToOne(() => Channel)
     channel: Channel
-
-    @Column({nullable: true})
-    channelName: string
 
     @Column()
     channelType: string

@@ -1,6 +1,6 @@
-import {ChannelService} from './../channel/channel.service'
-import {TeamService} from './../team/team.service'
-import {MessageService} from './../message/message.service'
+import {ChannelService} from '../channel/channel.service'
+import {TeamService} from '../team/team.service'
+import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
@@ -9,6 +9,7 @@ import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
 import {UserService} from 'src/user/user.service'
+import {RespondService} from '../respond/respond.service'
 
 @Injectable()
 export class SlackService {
@@ -20,6 +21,7 @@ export class SlackService {
         private readonly teamService: TeamService,
         private readonly channelService: ChannelService,
         private readonly messageService: MessageService,
+        private readonly respondService: RespondService,
         private readonly discordService: DiscordService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
@@ -32,18 +34,20 @@ export class SlackService {
         })
 
         this.registerCommands()
-        this.registerEventListener()
+        this.registerMessageEventListener()
+        this.registerReactionEventListener()
 
         this.#slackBotInstance
             .start()
-            .then(() => this.logger.verbose('✅ SlackModule instance initialized'))
+            .then(() => this.logger.verbose('✅  SlackModule instance initialized'))
             .catch(error => {
                 this.logger.error('error caught', error)
-                discordService.sendMessage(SlackService.name, 'initialization error', error)
+                discordService.sendMessage(SlackService.name, 'initialization error', error).then()
             })
     }
 
     private registerCommands() {
+        //TODO serve statistics by slash command
         this.#slackBotInstance.command('/admins', async ({ack, client}) => {
             const {members} = await client.users.list()
             const admins = members?.filter(member => member.is_admin)
@@ -63,20 +67,26 @@ export class SlackService {
         })
     }
 
-    private registerEventListener() {
+    private registerMessageEventListener() {
         this.#slackBotInstance.message(/.*/, async ({message, client, context, event, payload, say}) => {
             if (message.subtype) return
 
-            const genericMessage = message as GenericMessageEvent
             const teamId = context.teamId
             if (!teamId) {
-                this.logger.info('team not found')
+                this.logger.error('team not found')
                 return
             }
 
+            if (message.thread_ts) {
+                await this.onThreadMessage(message as GenericMessageEvent)
+                return
+            }
+
+            const genericMessage = message as GenericMessageEvent
+
             const channelMembersResponse = await client.conversations.members({channel: message.channel})
             if (!channelMembersResponse.ok) {
-                this.sendSlackApiError(new Error('channel member api error'))
+                await this.sendSlackApiError(new Error('channel member api error'))
                 return
             }
             const channelMembers = channelMembersResponse.members || []
@@ -84,24 +94,31 @@ export class SlackService {
         })
     }
 
-    private sendSlackApiError(error: any) {
-        this.discordService.sendMessage(SlackService.name, error.message, [{name: 'stack', value: error.stack.substr(0, 1024)}])
+    private registerReactionEventListener() {
+        //TODO emoji respond
+        this.#slackBotInstance.event('reaction_added', async ({event, context, body}) => {
+            console.log('::::::::::::::::::::::')
+            console.log(body)
+        })
+    }
+
+    private async sendSlackApiError(error: any) {
+        return this.discordService.sendMessage(SlackService.name, error.message, [{name: 'stack', value: error.stack.substr(0, 1024)}])
     }
 
     @Transactional()
     private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
-        //TODO channel name retrieve 방법 - cron
         const slackUserId = message.user
         const user = await this.userService.findBySlackId(slackUserId)
         if (!user) {
-            this.sendSlackApiError(new Error(`user not found`))
+            await this.sendSlackApiError(new Error(`user not found`))
             return
         }
 
         const channel = await this.channelService.findBySlackId(message.channel)
         const team = await this.teamService.findBySlackId(teamId)
 
-        await this.messageService.create({
+        const msg = await this.messageService.create({
             messageId: message.client_msg_id || '',
             type: message.type,
             textContent: message.text || '',
@@ -113,15 +130,36 @@ export class SlackService {
             teamId: team.id,
         })
 
-        //TODO 채널 멤버들의 reaction 일괄 생성
+        await Promise.all(
+            channelMembers.map(async member => {
+                const user = await this.userService.findBySlackId(member)
+                if (!user) return
+                return this.respondService.create({channelId: channel.id, messageId: msg.id, teamId: team.id, userId: user.id})
+            }),
+        )
+    }
+
+    @Transactional()
+    private async onThreadMessage(message: GenericMessageEvent) {
+        const parentMessage = await this.messageService.findByTimestamp(message.thread_ts as string)
+        if (!parentMessage) {
+            await this.sendSlackApiError(new Error(`parent message not found`))
+            return
+        }
+        const user = await this.userService.findBySlackId(message.user)
+        if (!user) {
+            await this.sendSlackApiError(new Error(`thread reply message user not found`))
+            return
+        }
+
+        return this.respondService.update(parentMessage.id, {userId: user.id, timestamp: message.ts})
     }
 
     @Transactional()
     public async fetchTeams() {
-        //TODO fetch teams
         const response = await this.#slackBotInstance.client.team.info()
         if (!response.ok || !response.team || !response.team.id) {
-            this.sendSlackApiError(new Error(`slack api error - ${this.fetchTeams.name}`))
+            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchTeams.name}`))
             return
         }
         const check = await this.teamService.findBySlackId(response.team.id)
@@ -139,10 +177,9 @@ export class SlackService {
 
     @Transactional()
     public async fetchChannels() {
-        //TODO fetch channels
         const response = await this.#slackBotInstance.client.conversations.list()
         if (!response.ok || !response.channels) {
-            this.sendSlackApiError(new Error(`slack api error - ${this.fetchChannels.name}`))
+            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchChannels.name}`))
             return
         }
 
@@ -175,7 +212,7 @@ export class SlackService {
     public async fetchUsers() {
         const response = await this.#slackBotInstance.client.users.list()
         if (!response.ok || !response.members) {
-            this.sendSlackApiError(new Error(`slack api error - ${this.fetchUsers.name}`))
+            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchUsers.name}`))
             return
         }
 

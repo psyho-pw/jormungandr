@@ -159,11 +159,13 @@ export class SlackService {
             return
         }
 
-        return this.respondService.update({messageId: parentMessage.id, userId: user.id, timestamp: message.ts})
+        const timeTaken = +message.ts - +parentMessage.timestamp
+        return this.respondService.update({messageId: parentMessage.id, userId: user.id, timestamp: message.ts, timeTaken})
     }
 
     @Transactional()
     private async onEmojiRespond(event: ReactionAddedEvent) {
+        console.log(event)
         if (event.item.type !== 'message') return
 
         const channel = await this.channelService.findBySlackId(event.item.channel)
@@ -179,7 +181,8 @@ export class SlackService {
             return
         }
 
-        await this.respondService.update({messageId: targetMessage.id, userId: user.id, timestamp: event.event_ts})
+        const timeTaken = +event.event_ts - +targetMessage.timestamp
+        return this.respondService.update({messageId: targetMessage.id, userId: user.id, timestamp: event.event_ts, timeTaken})
     }
 
     @Transactional()

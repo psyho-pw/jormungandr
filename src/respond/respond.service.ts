@@ -5,11 +5,11 @@ import {InjectRepository} from '@nestjs/typeorm'
 import {Respond} from './entities/respond.entity'
 import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
-import {User} from '../user/entities/user.entity'
+import {Message} from '../message/entities/message.entity'
 
 @Injectable()
 export class RespondService {
-    constructor(@InjectRepository(Respond) private respondRepository: Repository<Respond>) {}
+    constructor(@InjectRepository(Respond) private readonly respondRepository: Repository<Respond>) {}
 
     @Transactional()
     create(createRespondDto: CreateRespondDto): Promise<Respond> {
@@ -36,14 +36,16 @@ export class RespondService {
     }
 
     @Transactional()
-    update(updateRespondDto: UpdateRespondDto) {
-        //TODO calculate timestamp
-
+    async update(updateRespondDto: UpdateRespondDto) {
         return this.respondRepository
             .createQueryBuilder()
             .update(Respond)
-            .set({timestamp: updateRespondDto.timestamp})
-            .where('user.id = :userId AND message.id = :messageId', {userId: updateRespondDto.userId, messageId: updateRespondDto.messageId})
+            .set({timestamp: updateRespondDto.timestamp, timeTaken: updateRespondDto.timeTaken})
+            .where('user.id = :userId AND message.id = :messageId AND timeTaken > :timeTaken', {
+                userId: updateRespondDto.userId,
+                messageId: updateRespondDto.messageId,
+                timeTaken: updateRespondDto.timeTaken,
+            })
             .execute()
     }
 

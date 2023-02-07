@@ -9,4 +9,7 @@ export class UpdateRespondDto {
 
     @IsString()
     timestamp: string
+
+    @IsNumber()
+    timeTaken: number
 }

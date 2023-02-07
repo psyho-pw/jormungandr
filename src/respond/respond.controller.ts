@@ -24,7 +24,7 @@ export class RespondController {
 
     @Patch(':id')
     update(@Param('id') id: string, @Body() updateRespondDto: UpdateRespondDto) {
-        return this.respondService.update(+id, updateRespondDto)
+        return this.respondService.update(updateRespondDto)
     }
 
     @Delete(':id')

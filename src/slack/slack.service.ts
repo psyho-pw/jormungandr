@@ -4,7 +4,7 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, GenericMessageEvent} from '@slack/bolt'
+import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
@@ -31,6 +31,7 @@ export class SlackService {
             appToken: config.APP_TOKEN,
             token: config.TOKEN,
             socketMode: true,
+            // logLevel: LogLevel.DEBUG,
         })
 
         this.registerCommands()
@@ -96,9 +97,14 @@ export class SlackService {
 
     private registerReactionEventListener() {
         //TODO emoji respond
-        this.#slackBotInstance.event('reaction_added', async ({event, context, body}) => {
-            console.log('::::::::::::::::::::::')
-            console.log(body)
+
+        this.#slackBotInstance.event('reaction_added', async ({event}) => {
+            await this.onEmojiRespond(event)
+        })
+
+        this.#slackBotInstance.event('reaction_removed', async ({event, client}) => {
+            //TODO when removed?
+            console.log('removed')
         })
     }
 
@@ -141,7 +147,8 @@ export class SlackService {
 
     @Transactional()
     private async onThreadMessage(message: GenericMessageEvent) {
-        const parentMessage = await this.messageService.findByTimestamp(message.thread_ts as string)
+        const channel = await this.channelService.findBySlackId(message.channel)
+        const parentMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, message.thread_ts as string)
         if (!parentMessage) {
             await this.sendSlackApiError(new Error(`parent message not found`))
             return
@@ -152,7 +159,27 @@ export class SlackService {
             return
         }
 
-        return this.respondService.update(parentMessage.id, {userId: user.id, timestamp: message.ts})
+        return this.respondService.update({messageId: parentMessage.id, userId: user.id, timestamp: message.ts})
+    }
+
+    @Transactional()
+    private async onEmojiRespond(event: ReactionAddedEvent) {
+        if (event.item.type !== 'message') return
+
+        const channel = await this.channelService.findBySlackId(event.item.channel)
+        const targetMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, event.item.ts)
+        if (!targetMessage) {
+            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - target message not found`))
+            return
+        }
+
+        const user = await this.userService.findBySlackId(event.user)
+        if (!user) {
+            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - user not found`))
+            return
+        }
+
+        await this.respondService.update({messageId: targetMessage.id, userId: user.id, timestamp: event.event_ts})
     }
 
     @Transactional()

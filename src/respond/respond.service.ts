@@ -31,14 +31,19 @@ export class RespondService {
     }
 
     @Transactional()
-    update(id: number, updateRespondDto: UpdateRespondDto) {
+    findByMessageIdAndUserId(messageId: number, userId: number) {
+        return this.respondRepository.findOneBy({message: {id: messageId}, user: {id: userId}})
+    }
+
+    @Transactional()
+    update(updateRespondDto: UpdateRespondDto) {
         //TODO calculate timestamp
 
         return this.respondRepository
             .createQueryBuilder()
             .update(Respond)
             .set({timestamp: updateRespondDto.timestamp})
-            .where('user.id = :userId AND message.id = :messageId', {userId: updateRespondDto.userId, messageId: id})
+            .where('user.id = :userId AND message.id = :messageId', {userId: updateRespondDto.userId, messageId: updateRespondDto.messageId})
             .execute()
     }
 

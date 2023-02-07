@@ -96,8 +96,6 @@ export class SlackService {
     }
 
     private registerReactionEventListener() {
-        //TODO emoji respond
-
         this.#slackBotInstance.event('reaction_added', async ({event}) => {
             await this.onEmojiRespond(event)
         })
@@ -165,7 +163,6 @@ export class SlackService {
 
     @Transactional()
     private async onEmojiRespond(event: ReactionAddedEvent) {
-        console.log(event)
         if (event.item.type !== 'message') return
 
         const channel = await this.channelService.findBySlackId(event.item.channel)

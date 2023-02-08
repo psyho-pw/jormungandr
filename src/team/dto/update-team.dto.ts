@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateTeamDto } from './create-team.dto';
+import {OmitType, PartialType} from '@nestjs/mapped-types'
+import {Team} from '../entities/team.entity'
 
-export class UpdateTeamDto extends PartialType(CreateTeamDto) {}
+export class UpdateTeamDto extends PartialType(Team) {}

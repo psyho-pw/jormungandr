@@ -15,6 +15,15 @@ export class Team extends AbstractActorEntity {
 
     @Column()
     domain: string
+
+    @Column()
+    coreTimeStart: number
+
+    @Column()
+    coreTimeEnd: number
+
+    @Column()
+    maxRespondTime: number
 }
 
 // Example

@@ -1,23 +1,32 @@
-import {Injectable} from '@nestjs/common'
+import {Injectable, NotFoundException} from '@nestjs/common'
 import {CreateRespondDto} from './dto/create-respond.dto'
 import {UpdateRespondDto} from './dto/update-respond.dto'
 import {InjectRepository} from '@nestjs/typeorm'
 import {Respond} from './entities/respond.entity'
 import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
-import {Message} from '../message/entities/message.entity'
+import {AppConfigService} from '../config/config.service'
+import {TeamService} from '../team/team.service'
 
 @Injectable()
 export class RespondService {
-    constructor(@InjectRepository(Respond) private readonly respondRepository: Repository<Respond>) {}
+    constructor(
+        private readonly configService: AppConfigService,
+        private readonly teamService: TeamService,
+        @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
+    ) {}
 
     @Transactional()
-    create(createRespondDto: CreateRespondDto): Promise<Respond> {
+    async create(createRespondDto: CreateRespondDto): Promise<Respond> {
+        const team = await this.teamService.findOne(createRespondDto.teamId)
+        if (!team) throw new NotFoundException('team not found')
+
         const respond = new Respond()
         respond.setUser(createRespondDto.userId)
         respond.setTeam(createRespondDto.teamId)
         respond.setChannel(createRespondDto.channelId)
         respond.setMessage(createRespondDto.messageId)
+        respond.timeTaken = team.maxRespondTime
 
         return this.respondRepository.save(respond)
     }

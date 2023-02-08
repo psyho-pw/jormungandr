@@ -77,6 +77,10 @@ export class SlackService {
                 this.logger.error('team not found')
                 return
             }
+            if (!(await this.isCoreTime(teamId))) {
+                this.logger.warn('Current time is not core-time')
+                return
+            }
 
             if (message.thread_ts) {
                 await this.onThreadMessage(message as GenericMessageEvent)
@@ -108,6 +112,14 @@ export class SlackService {
 
     private async sendSlackApiError(error: any) {
         return this.discordService.sendMessage(SlackService.name, error.message, [{name: 'stack', value: error.stack.substr(0, 1024)}])
+    }
+
+    private async isCoreTime(teamId: string): Promise<boolean> {
+        const team = await this.teamService.findBySlackId(teamId)
+        if (!team) return false
+
+        const currentHour = new Date().getHours()
+        return !(currentHour < team.coreTimeStart || currentHour > team.coreTimeEnd)
     }
 
     @Transactional()
@@ -145,6 +157,11 @@ export class SlackService {
 
     @Transactional()
     private async onThreadMessage(message: GenericMessageEvent) {
+        if (!(await this.isCoreTime(message.team || ''))) {
+            this.logger.warn('Current time is not core-time')
+            return
+        }
+
         const channel = await this.channelService.findBySlackId(message.channel)
         const parentMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, message.thread_ts as string)
         if (!parentMessage) {

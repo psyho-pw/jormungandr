@@ -24,6 +24,8 @@ export type DBConfig = TypeOrmModuleOptions
 export interface SlackConfig {
     APP_TOKEN: string
     TOKEN: string
+    CORE_TIME: {start: number; end: number}
+    MAX_RESPOND_TIME: number
 }
 
 export interface DiscordConfig {

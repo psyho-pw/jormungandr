@@ -4,12 +4,13 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent} from '@slack/bolt'
+import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, StaticSelectAction} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
 import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
+import {PlainTextElement, PlainTextOption} from '@slack/types'
 
 @Injectable()
 export class SlackService {
@@ -37,6 +38,7 @@ export class SlackService {
         this.registerCommands()
         this.registerMessageEventListener()
         this.registerReactionEventListener()
+        this.registerActionHandler()
 
         this.#slackBotInstance
             .start()
@@ -49,11 +51,70 @@ export class SlackService {
 
     private registerCommands() {
         //TODO serve statistics by slash command
-        this.#slackBotInstance.command('/admins', async ({ack, client}) => {
+
+        this.#slackBotInstance.command('/coretime', async ({ack, client, context, respond, say}) => {
+            if (!context.teamId) {
+                await say("team doesn't exist in our database yet")
+                return
+            }
+            const team = await this.teamService.findBySlackId(context.teamId)
+
+            const options: PlainTextOption[] = Array(25)
+                .fill(0)
+                .map((_, idx) => ({
+                    text: {type: 'plain_text', text: idx.toString()},
+                    value: idx.toString(),
+                }))
+
+            await say({
+                blocks: [
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'mrkdwn',
+                            text: `:stopwatch: current core time is between ${team.coreTimeStart} ~ ${team.coreTimeEnd}`,
+                        },
+                    },
+                    {
+                        type: 'actions',
+                        elements: [
+                            {
+                                type: 'static_select',
+                                initial_option: {
+                                    text: {
+                                        type: 'plain_text',
+                                        text: team.coreTimeStart.toString(),
+                                    },
+                                    value: team.coreTimeStart.toString(),
+                                },
+                                options: options,
+                                action_id: 'coretime_start_change',
+                            },
+                            {
+                                type: 'static_select',
+                                initial_option: {
+                                    text: {
+                                        type: 'plain_text',
+                                        text: team.coreTimeEnd.toString(),
+                                    },
+                                    value: team.coreTimeEnd.toString(),
+                                },
+                                options: options,
+                                action_id: 'coretime_end_change',
+                            },
+                        ],
+                    },
+                ],
+                text: 'error',
+            })
+            await ack()
+        })
+
+        this.#slackBotInstance.command('/admins', async ({ack, client, respond}) => {
             const {members} = await client.users.list()
             const admins = members?.filter(member => member.is_admin)
 
-            await ack({
+            await respond({
                 blocks: [
                     {
                         type: 'section',
@@ -66,6 +127,35 @@ export class SlackService {
                 response_type: 'ephemeral', // change to "in_channel" to make it visible to others
             })
         })
+    }
+
+    private registerActionHandler() {
+        this.#slackBotInstance.action('coretime_start_change', async ({ack, respond, action, context}) => {
+            action = action as StaticSelectAction
+            const teamId = context.teamId
+            if (!teamId) {
+                await respond('error')
+                return
+            }
+            await this.handleAction('coreTimeStart', action, teamId)
+            await ack()
+        })
+
+        this.#slackBotInstance.action('coretime_end_change', async ({ack, respond, action, context}) => {
+            action = action as StaticSelectAction
+            const teamId = context.teamId
+            if (!teamId) {
+                await respond('error')
+                return
+            }
+            await this.handleAction('coreTimeEnd', action, teamId)
+            await ack()
+        })
+    }
+
+    private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string) {
+        const value = +action.selected_option.value
+        await this.teamService.updateBySlackId(teamId, {[columnType]: value})
     }
 
     private registerMessageEventListener() {

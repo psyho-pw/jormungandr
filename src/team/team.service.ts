@@ -43,8 +43,15 @@ export class TeamService {
     }
 
     @Transactional()
-    update(id: number, updateTeamDto: UpdateTeamDto) {
-        return `This action updates a #${id} team`
+    updateBySlackId(id: string, updateTeamDto: UpdateTeamDto) {
+        return this.teamRepository
+            .createQueryBuilder()
+            .update(Team)
+            .set({coreTimeStart: updateTeamDto.coreTimeStart, coreTimeEnd: updateTeamDto.coreTimeEnd})
+            .where('teamId = :teamId', {
+                teamId: id,
+            })
+            .execute()
     }
 
     @Transactional()

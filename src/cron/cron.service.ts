@@ -4,6 +4,7 @@ import {CronJob} from 'cron'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {SlackService} from 'src/slack/slack.service'
 import {Logger} from 'winston'
+import { Transactional } from "typeorm-transactional";
 
 @Injectable()
 export class CronService {
@@ -17,6 +18,7 @@ export class CronService {
     static slackFetchSchedule = '0 0 * * * 1-5'
 
     @Cron(CronService.slackFetchSchedule)
+    @Transactional()
     public async fetchSlackInfo() {
         await this.slackService.fetchTeams()
         await this.slackService.fetchChannels()

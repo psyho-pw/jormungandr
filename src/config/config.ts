@@ -67,6 +67,11 @@ export const configs = (): Configs => {
         SLACK: {
             APP_TOKEN: process.env.SLACK_APP_TOKEN || '',
             TOKEN: process.env.SLACK_TOKEN || '',
+            CORE_TIME: {
+                start: 14,
+                end: 17,
+            },
+            MAX_RESPOND_TIME: 60 * 5,
         },
         DISCORD: {
             WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL || '',

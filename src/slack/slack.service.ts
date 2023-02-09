@@ -4,7 +4,7 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, StaticSelectAction} from '@slack/bolt'
+import {App, ButtonAction, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, StaticSelectAction} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
@@ -39,6 +39,7 @@ export class SlackService {
         this.registerMessageEventListener()
         this.registerReactionEventListener()
         this.registerActionHandler()
+        this.registerViewEventListener()
 
         this.#slackBotInstance
             .start()
@@ -110,27 +111,59 @@ export class SlackService {
             await ack()
         })
 
-        this.#slackBotInstance.command('/admins', async ({ack, client, respond}) => {
-            const {members} = await client.users.list()
-            const admins = members?.filter(member => member.is_admin)
+        this.#slackBotInstance.command('/respond-time', async ({ack, say, context, respond, client, body}) => {
+            if (!context.teamId) {
+                await say("team doesn't exist in our database yet")
+                return
+            }
+            const team = await this.teamService.findBySlackId(context.teamId)
 
-            await respond({
-                blocks: [
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `${admins?.map(admin => `@${admin.name}`).join(', ')}`,
-                        },
+            await client.views.open({
+                token: this.configService.getSlackConfig().TOKEN,
+                trigger_id: body.trigger_id,
+                view: {
+                    type: 'modal',
+                    callback_id: 'max_respond_time_view',
+                    title: {
+                        type: 'plain_text',
+                        text: 'Set max respond time',
                     },
-                ],
-                response_type: 'ephemeral', // change to "in_channel" to make it visible to others
+                    blocks: [
+                        {
+                            type: 'input',
+                            block_id: 'max_respond_time_block',
+                            element: {
+                                type: 'number_input',
+                                is_decimal_allowed: false,
+                                action_id: 'number_input-action',
+                                min_value: '180',
+                                max_value: '1800',
+                                placeholder: {
+                                    type: 'plain_text',
+                                    text: '최대로 설정할 반응 시간을 초단위로 입력',
+                                },
+                            },
+                            label: {
+                                type: 'plain_text',
+                                text: `:stopwatch: current max respond time is ${team.maxRespondTime} (seconds)`,
+                                emoji: true,
+                            },
+                        },
+                    ],
+                    submit: {
+                        type: 'plain_text',
+                        text: 'Submit',
+                        // action_id: 'max_respond_time_change',
+                    },
+                },
             })
+
+            await ack()
         })
     }
 
     private registerActionHandler() {
-        this.#slackBotInstance.action('coretime_start_change', async ({ack, respond, action, context}) => {
+        this.#slackBotInstance.action('coretime_start_change', async ({ack, respond, action, context, say}) => {
             action = action as StaticSelectAction
             const teamId = context.teamId
             if (!teamId) {
@@ -138,10 +171,11 @@ export class SlackService {
                 return
             }
             await this.handleAction('coreTimeStart', action, teamId)
+            await say('core time start hour changed')
             await ack()
         })
 
-        this.#slackBotInstance.action('coretime_end_change', async ({ack, respond, action, context}) => {
+        this.#slackBotInstance.action('coretime_end_change', async ({ack, respond, action, context, say}) => {
             action = action as StaticSelectAction
             const teamId = context.teamId
             if (!teamId) {
@@ -149,13 +183,14 @@ export class SlackService {
                 return
             }
             await this.handleAction('coreTimeEnd', action, teamId)
+            await say('core time end hour changed')
             await ack()
         })
     }
 
     private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string) {
         const value = +action.selected_option.value
-        await this.teamService.updateBySlackId(teamId, {[columnType]: value})
+        await this.teamService.updateTeamBySlackId(teamId, {[columnType]: value})
     }
 
     private registerMessageEventListener() {
@@ -197,6 +232,32 @@ export class SlackService {
         this.#slackBotInstance.event('reaction_removed', async ({event, client}) => {
             //TODO when removed?
             console.log('removed')
+        })
+    }
+
+    private registerViewEventListener() {
+        this.#slackBotInstance.view('max_respond_time_view', async ({ack, context, view, client, body}) => {
+            await ack()
+            if (!context.teamId) {
+                await client.chat.postMessage({
+                    text: "team doesn't exist in our database yet",
+                    channel: body.user.id,
+                })
+                return
+            }
+
+            const inputValue = view.state.values['max_respond_time_block']['number_input-action'].value
+            if (!inputValue) {
+                await this.sendSlackApiError(new Error('input value is empty'))
+                return
+            }
+
+            await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
+
+            await client.chat.postMessage({
+                text: 'max respond time is now ' + inputValue,
+                channel: body.user.id,
+            })
         })
     }
 

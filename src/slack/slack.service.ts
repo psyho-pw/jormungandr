@@ -196,10 +196,6 @@ export class SlackService {
                 this.logger.error('team not found')
                 return
             }
-            if (!(await this.isCoreTime(teamId))) {
-                this.logger.warn('Current time is not core-time')
-                return
-            }
 
             if (message.thread_ts) {
                 await this.onThreadMessage(message)
@@ -267,6 +263,11 @@ export class SlackService {
 
     @Transactional()
     private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
+        if (!(await this.isCoreTime(teamId))) {
+            this.logger.warn('Current time is not core-time')
+            return
+        }
+
         const slackUserId = message.user
         const user = await this.userService.findBySlackId(slackUserId)
         if (!user) {

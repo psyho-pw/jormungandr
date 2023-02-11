@@ -4,13 +4,13 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, ButtonAction, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, StaticSelectAction} from '@slack/bolt'
+import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, SayFn, StaticSelectAction} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
 import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
-import {PlainTextElement, PlainTextOption} from '@slack/types'
+import {PlainTextOption} from '@slack/types'
 
 @Injectable()
 export class SlackService {
@@ -53,7 +53,7 @@ export class SlackService {
     private registerCommands() {
         //TODO serve statistics by slash command
 
-        this.#slackBotInstance.command('/coretime', async ({ack, client, context, respond, say}) => {
+        this.#slackBotInstance.command('/coretime', async ({ack, context, say}) => {
             if (!context.teamId) {
                 await say("team doesn't exist in our database yet")
                 return
@@ -153,7 +153,6 @@ export class SlackService {
                     submit: {
                         type: 'plain_text',
                         text: 'Submit',
-                        // action_id: 'max_respond_time_change',
                     },
                 },
             })
@@ -165,36 +164,31 @@ export class SlackService {
     private registerActionHandler() {
         this.#slackBotInstance.action('coretime_start_change', async ({ack, respond, action, context, say}) => {
             action = action as StaticSelectAction
-            const teamId = context.teamId
-            if (!teamId) {
-                await respond('error')
-                return
-            }
-            await this.handleAction('coreTimeStart', action, teamId)
-            await say('core time start hour changed')
+            await this.handleAction('coreTimeStart', action, context.teamId, respond, say)
             await ack()
         })
 
         this.#slackBotInstance.action('coretime_end_change', async ({ack, respond, action, context, say}) => {
             action = action as StaticSelectAction
-            const teamId = context.teamId
-            if (!teamId) {
-                await respond('error')
-                return
-            }
-            await this.handleAction('coreTimeEnd', action, teamId)
-            await say('core time end hour changed')
+            await this.handleAction('coreTimeEnd', action, context.teamId, respond, say)
             await ack()
         })
     }
 
-    private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string) {
+    @Transactional()
+    private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string | undefined, respond: RespondFn, say: SayFn) {
+        if (!teamId) {
+            await respond('error')
+            return
+        }
         const value = +action.selected_option.value
         await this.teamService.updateTeamBySlackId(teamId, {[columnType]: value})
+        await say(`core time ${columnType === 'coreTimeStart' ? 'start' : 'end'} hour changed to ${action.selected_option.value}`)
     }
 
     private registerMessageEventListener() {
         this.#slackBotInstance.message(/.*/, async ({message, client, context, event, payload, say}) => {
+            message = message as GenericMessageEvent
             if (message.subtype) return
 
             const teamId = context.teamId
@@ -202,17 +196,11 @@ export class SlackService {
                 this.logger.error('team not found')
                 return
             }
-            if (!(await this.isCoreTime(teamId))) {
-                this.logger.warn('Current time is not core-time')
-                return
-            }
 
             if (message.thread_ts) {
-                await this.onThreadMessage(message as GenericMessageEvent)
+                await this.onThreadMessage(message)
                 return
             }
-
-            const genericMessage = message as GenericMessageEvent
 
             const channelMembersResponse = await client.conversations.members({channel: message.channel})
             if (!channelMembersResponse.ok) {
@@ -220,7 +208,7 @@ export class SlackService {
                 return
             }
             const channelMembers = channelMembersResponse.members || []
-            await this.onMessage(genericMessage, teamId, channelMembers)
+            await this.onMessage(message, teamId, channelMembers)
         })
     }
 
@@ -275,6 +263,11 @@ export class SlackService {
 
     @Transactional()
     private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
+        if (!(await this.isCoreTime(teamId))) {
+            this.logger.warn('Current time is not core-time')
+            return
+        }
+
         const slackUserId = message.user
         const user = await this.userService.findBySlackId(slackUserId)
         if (!user) {
@@ -301,6 +294,7 @@ export class SlackService {
             channelMembers.map(async member => {
                 const user = await this.userService.findBySlackId(member)
                 if (!user) return
+                if (msg.user.id === user.id) return
                 return this.respondService.create({channelId: channel.id, messageId: msg.id, teamId: team.id, userId: user.id})
             }),
         )
@@ -325,6 +319,11 @@ export class SlackService {
             return
         }
 
+        if (parentMessage.user.id === user.id) {
+            this.logger.verbose('thread message to self, skipping ...')
+            return
+        }
+
         const timeTaken = +message.ts - +parentMessage.timestamp
         return this.respondService.update({messageId: parentMessage.id, userId: user.id, timestamp: message.ts, timeTaken})
     }
@@ -343,6 +342,11 @@ export class SlackService {
         const user = await this.userService.findBySlackId(event.user)
         if (!user) {
             await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - user not found`))
+            return
+        }
+
+        if (targetMessage.user.id === user.id) {
+            this.logger.verbose('emoji response to self, skipping ...')
             return
         }
 

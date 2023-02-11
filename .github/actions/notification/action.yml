@@ -1,0 +1,31 @@
+name: 'notifier'
+
+inputs:
+  status:
+    required: false
+    default: 'FAIL'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Send message
+      shell: bash
+      run: |
+        EMOTICON="⛔"
+        COLOR="\"danger\""
+        
+        if [ "${{ inputs.status }}" = "SUCCESS" ]; then
+            EMOTICON="✅"
+            COLOR="\"good\""
+        fi
+        
+        FALLBACK="\"Something went wrong.\""
+        TITLE="\"REPORT\""
+        TEXT="\"\`${GITHUB_ACTOR}:${GITHUB_REF#refs/heads/}\` triggered [${GITHUB_WORKFLOW}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) workflow in [psyho-pw/toys-server](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY})\n \`${GITHUB_ACTOR}\`\""
+        FIELD_TITLE="\"STATUS\""
+        FIELD_VALUE="\"${EMOTICON} \`${{ inputs.status }}\` [checks](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}/${GITHUB_JOB})\""
+        WEBHOOK=https://discord.com/api/webhooks/1051027295080546334/5hA6n1xTCCtwsHgOezydt-tws5l1Gfx0zLefOzE6XvxloAFsgM8V4A1YIvvidLjnqNDN
+        
+        curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "{\"embeds\":[{\"type\":\"rich\",\"fields\":[{\"name\":${TITLE},\"value\":${TEXT}},{\"name\":${FIELD_TITLE},\"value\":${FIELD_VALUE}}]}]}" "${WEBHOOK}"
+      

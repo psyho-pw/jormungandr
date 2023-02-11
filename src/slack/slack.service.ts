@@ -39,7 +39,7 @@ export class SlackService {
         this.registerMessageEventListener()
         this.registerReactionEventListener()
         this.registerActionHandler()
-        this.registerViewEventListener()
+        this.registerViewSubmissionListener()
 
         this.#slackBotInstance
             .start()
@@ -54,11 +54,11 @@ export class SlackService {
         //TODO serve statistics by slash command
 
         this.#slackBotInstance.command('/coretime', async ({ack, context, say}) => {
-            if (!context.teamId) {
+            const team = await this.teamService.findOneBySlackId(context.teamId!)
+            if (!team) {
                 await say("team doesn't exist in our database yet")
                 return
             }
-            const team = await this.teamService.findBySlackId(context.teamId)
 
             const options: PlainTextOption[] = Array(25)
                 .fill(0)
@@ -112,11 +112,11 @@ export class SlackService {
         })
 
         this.#slackBotInstance.command('/respond-time', async ({ack, say, context, respond, client, body}) => {
-            if (!context.teamId) {
+            const team = await this.teamService.findOneBySlackId(context.teamId!)
+            if (!team) {
                 await say("team doesn't exist in our database yet")
                 return
             }
-            const team = await this.teamService.findBySlackId(context.teamId)
 
             await client.views.open({
                 token: this.configService.getSlackConfig().TOKEN,
@@ -158,6 +158,125 @@ export class SlackService {
             })
 
             await ack()
+        })
+
+        this.#slackBotInstance.command('/statistics', async ({ack, say, context, client, body}) => {
+            const now = new Date()
+            const currentYear = now.getFullYear()
+            const currentMonth = now.getMonth() + 1
+
+            const channels = await this.channelService.findByTeamSlackId(body.team_id)
+
+            console.log(currentYear, currentMonth)
+
+            const yearOptions: PlainTextOption[] = []
+            for (let diff = 0; diff < 10; diff++) {
+                const yearStr = (currentYear - diff).toString()
+                yearOptions.push({
+                    text: {
+                        type: 'plain_text',
+                        text: yearStr,
+                    },
+                    value: yearStr,
+                })
+            }
+
+            const monthOptions: PlainTextOption[] = []
+            for (let month = 1; month < 12; month++) {
+                monthOptions.push({
+                    text: {
+                        type: 'plain_text',
+                        text: month.toString(),
+                    },
+                    value: month.toString(),
+                })
+            }
+
+            try {
+                await client.views.open({
+                    token: this.configService.getSlackConfig().TOKEN,
+                    trigger_id: body.trigger_id,
+                    view: {
+                        type: 'modal',
+                        callback_id: 'statistics_view',
+                        title: {
+                            type: 'plain_text',
+                            text: 'Enter target year/month',
+                        },
+                        blocks: [
+                            {
+                                type: 'input',
+                                block_id: 'year_select_block',
+                                element: {
+                                    type: 'static_select',
+                                    initial_option: {
+                                        text: {
+                                            type: 'plain_text',
+                                            text: currentYear.toString(),
+                                        },
+                                        value: currentYear.toString(),
+                                    },
+                                    options: yearOptions,
+                                    action_id: 'year_select_action',
+                                },
+                                label: {
+                                    type: 'plain_text',
+                                    text: 'Year',
+                                },
+                            },
+                            {
+                                type: 'input',
+                                block_id: 'month_select_block',
+                                element: {
+                                    type: 'static_select',
+                                    initial_option: {
+                                        text: {
+                                            type: 'plain_text',
+                                            text: currentMonth.toString(),
+                                        },
+                                        value: currentMonth.toString(),
+                                    },
+                                    options: monthOptions,
+                                    action_id: 'month_select_action',
+                                },
+                                label: {
+                                    type: 'plain_text',
+                                    text: 'Month',
+                                },
+                            },
+                            {
+                                type: 'input',
+                                block_id: 'channel_select_block',
+                                element: {
+                                    type: 'static_select',
+                                    initial_option: {
+                                        text: {
+                                            type: 'plain_text',
+                                            text: channels.filter(e => e.channelId === body.channel_id)[0].name,
+                                        },
+                                        value: body.channel_id,
+                                    },
+                                    options: channels.map((channel): PlainTextOption => ({text: {type: 'plain_text', text: channel.name}, value: channel.channelId})),
+                                    action_id: 'channel_select_action',
+                                },
+                                label: {
+                                    type: 'plain_text',
+                                    text: 'Channel to post',
+                                },
+                            },
+                        ],
+                        submit: {
+                            type: 'plain_text',
+                            text: 'Submit',
+                        },
+                    },
+                })
+            } catch (err) {
+                console.log(err)
+                console.log(err.data)
+            } finally {
+                await ack()
+            }
         })
     }
 
@@ -223,7 +342,7 @@ export class SlackService {
         })
     }
 
-    private registerViewEventListener() {
+    private registerViewSubmissionListener() {
         this.#slackBotInstance.view('max_respond_time_view', async ({ack, context, view, client, body}) => {
             await ack()
             if (!context.teamId) {
@@ -247,6 +366,57 @@ export class SlackService {
                 channel: body.user.id,
             })
         })
+
+        this.#slackBotInstance.view('statistics_view', async ({ack, context, view, client, body, payload}) => {
+            console.log(payload)
+            console.log(payload.state.values['year_select_block'])
+            const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
+            const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
+            const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
+            console.log(year, month, channel)
+            const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
+            console.log(statistics)
+
+            const blocks = statistics.map((user: any, idx: number) => {
+                return {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${user.average} seconds\n Ipsum Lorem ipsum`,
+                    },
+                    accessory: {
+                        type: 'image',
+                        image_url: user.profileImage || 'https://cdn.mos.cms.futurecdn.net/SDDw7CnuoUGax6x9mTo7dd-1920-80.jpg.webp',
+                        alt_text: 'alt text for image',
+                    },
+                }
+            })
+
+            try {
+                await client.chat.postMessage({
+                    text: ':chart_with_upwards_trend:',
+                    icon_emoji: 'true',
+                    blocks: [
+                        {
+                            type: 'section',
+                            text: {
+                                type: 'mrkdwn',
+                                text: `*${year}년 ${month}월* 통계`,
+                            },
+                        },
+                        {
+                            type: 'divider',
+                        },
+                        ...blocks,
+                    ],
+                    channel,
+                })
+            } catch (err) {
+                console.log(err.data)
+            } finally {
+                await ack()
+            }
+        })
     }
 
     private async sendSlackApiError(error: any) {
@@ -254,7 +424,7 @@ export class SlackService {
     }
 
     private async isCoreTime(teamId: string): Promise<boolean> {
-        const team = await this.teamService.findBySlackId(teamId)
+        const team = await this.teamService.findOneBySlackId(teamId)
         if (!team) return false
 
         const currentHour = new Date().getHours()
@@ -275,8 +445,17 @@ export class SlackService {
             return
         }
 
-        const channel = await this.channelService.findBySlackId(message.channel)
-        const team = await this.teamService.findBySlackId(teamId)
+        const team = await this.teamService.findOneBySlackId(teamId)
+        if (!team) {
+            await this.sendSlackApiError(new Error(`team not found`))
+            return
+        }
+
+        const channel = await this.channelService.findOneBySlackId(message.channel)
+        if (!channel) {
+            await this.sendSlackApiError(new Error(`channel not found`))
+            return
+        }
 
         const msg = await this.messageService.create({
             messageId: message.client_msg_id || '',
@@ -307,51 +486,49 @@ export class SlackService {
             return
         }
 
-        const channel = await this.channelService.findBySlackId(message.channel)
+        const channel = await this.channelService.findOneBySlackId(message.channel)
+        if (!channel) {
+            await this.sendSlackApiError(new Error(`thread reply message user not found`))
+            return
+        }
+
         const parentMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, message.thread_ts as string)
         if (!parentMessage) {
             await this.sendSlackApiError(new Error(`parent message not found`))
             return
         }
-        const user = await this.userService.findBySlackId(message.user)
-        if (!user) {
-            await this.sendSlackApiError(new Error(`thread reply message user not found`))
-            return
-        }
 
-        if (parentMessage.user.id === user.id) {
+        if (parentMessage.user.slackId === message.user) {
             this.logger.verbose('thread message to self, skipping ...')
             return
         }
 
         const timeTaken = +message.ts - +parentMessage.timestamp
-        return this.respondService.update({messageId: parentMessage.id, userId: user.id, timestamp: message.ts, timeTaken})
+        return this.respondService.update({messageId: parentMessage.id, userId: parentMessage.user.id, timestamp: message.ts, timeTaken})
     }
 
     @Transactional()
     private async onEmojiRespond(event: ReactionAddedEvent) {
         if (event.item.type !== 'message') return
 
-        const channel = await this.channelService.findBySlackId(event.item.channel)
+        const channel = await this.channelService.findOneBySlackId(event.item.channel)
+        if (!channel) {
+            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - channel not found: ${event.item.channel}`))
+            return
+        }
         const targetMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, event.item.ts)
         if (!targetMessage) {
             await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - target message not found`))
             return
         }
 
-        const user = await this.userService.findBySlackId(event.user)
-        if (!user) {
-            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - user not found`))
-            return
-        }
-
-        if (targetMessage.user.id === user.id) {
+        if (targetMessage.user.slackId === event.user) {
             this.logger.verbose('emoji response to self, skipping ...')
             return
         }
 
         const timeTaken = +event.event_ts - +targetMessage.timestamp
-        return this.respondService.update({messageId: targetMessage.id, userId: user.id, timestamp: event.event_ts, timeTaken})
+        return this.respondService.update({messageId: targetMessage.id, userId: targetMessage.user.id, timestamp: event.event_ts, timeTaken})
     }
 
     @Transactional()
@@ -361,7 +538,7 @@ export class SlackService {
             await this.sendSlackApiError(new Error(`slack api error - ${this.fetchTeams.name}`))
             return
         }
-        const check = await this.teamService.findBySlackId(response.team.id)
+        const check = await this.teamService.findOneBySlackId(response.team.id)
         if (check) {
             //TODO update user when info mismatches
             return
@@ -388,14 +565,18 @@ export class SlackService {
                 continue
             }
 
-            const check = await this.channelService.findBySlackId(channel.id)
+            const check = await this.channelService.findOneBySlackId(channel.id)
 
             if (check) {
                 //TODO update user when info mismatches
                 continue
             }
 
-            const team = await this.teamService.findBySlackId(channel.context_team_id || '')
+            const team = await this.teamService.findOneBySlackId(channel.context_team_id!)
+            if (!team) {
+                await this.sendSlackApiError(new Error(`${this.fetchChannels.name} - team not found`))
+                return
+            }
 
             await this.channelService.create({
                 channelId: channel.id,
@@ -415,6 +596,8 @@ export class SlackService {
             return
         }
 
+        console.log(response.members)
+
         for (const user of response.members) {
             if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id) {
                 this.logger.error('user is not qualified', user)
@@ -423,11 +606,21 @@ export class SlackService {
 
             const check = await this.userService.findBySlackId(user.id)
             if (check) {
-                //TODO update user when info mismatches
+                if (check.name !== user.name || check.realName !== user.real_name || check.profileImage !== user.profile?.image_original) {
+                    await this.userService.update(check.id, {
+                        name: check.name,
+                        profileImage: user.profile?.image_original || null,
+                    })
+                }
                 continue
             }
 
-            const team = await this.teamService.findBySlackId(user.team_id || '')
+            const team = await this.teamService.findOneBySlackId(user.team_id!)
+            if (!team) {
+                await this.sendSlackApiError(new Error(`${this.fetchChannels.name} - team not found`))
+                return
+            }
+
             await this.userService.create({
                 slackId: user.id,
                 teamId: team.id,
@@ -435,6 +628,7 @@ export class SlackService {
                 realName: user.real_name || '',
                 phone: user.profile?.phone || null,
                 timeZone: user.tz || '',
+                profileImage: user.profile?.image_original || null,
             })
         }
     }

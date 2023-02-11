@@ -28,9 +28,8 @@ export class TeamService {
     }
 
     @Transactional()
-    async findBySlackId(id: string) {
-        const [team] = await this.teamRepository.findBy({teamId: id})
-        return team
+    findOneBySlackId(id: string) {
+        return this.teamRepository.findOneBy({teamId: id})
     }
 
     @Transactional()

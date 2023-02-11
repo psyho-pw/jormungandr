@@ -5,24 +5,27 @@ import {Column, Entity, Index, ManyToOne} from 'typeorm'
 @Entity()
 export class User extends AbstractEntity {
     @Index({unique: true})
-    @Column()
+    @Column({type: String})
     slackId: string
 
     @Index()
     @ManyToOne(() => Team)
     team: Team
 
-    @Column()
+    @Column({type: String})
     name: string
 
-    @Column()
+    @Column({type: String})
     realName: string
 
     @Column({type: String, nullable: true})
     phone!: string | null
 
-    @Column()
+    @Column({type: String})
     timeZone: string
+
+    @Column({type: String, nullable: true})
+    profileImage: string | null
 
     public setTeam(id: number) {
         const team = new Team()

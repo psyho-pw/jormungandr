@@ -1,4 +1,4 @@
-import {Team} from './../../team/entities/team.entity'
+import {Team} from '../../team/entities/team.entity'
 import {AbstractActorEntity} from 'src/common/abstract.entity'
 import {Column, Entity, Index, ManyToOne} from 'typeorm'
 

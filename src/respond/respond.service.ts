@@ -58,6 +58,23 @@ export class RespondService {
             .execute()
     }
 
+    @Transactional()
+    getStatistics(teamId: string, year: number, month: number) {
+        return this.respondRepository.query(
+            `
+            SELECT *
+            FROM (
+                SELECT r.*, AVG(r.timeTaken) as average
+                FROM respond r JOIN team t on r.teamId = t.id
+                WHERE t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
+                GROUP BY r.userId
+            ) as avgTable JOIN user on avgTable.userId = user.id
+            ORDER BY average;
+        `,
+            [teamId, `${year}-${month}`],
+        )
+    }
+
     remove(id: number) {
         return `This action removes a #${id} respond`
     }

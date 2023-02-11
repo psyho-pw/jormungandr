@@ -21,9 +21,13 @@ export class ChannelService {
     }
 
     @Transactional()
-    async findBySlackId(id: string) {
-        const [res] = await this.channelRepository.findBy({channelId: id})
-        return res
+    findOneBySlackId(id: string) {
+        return this.channelRepository.findOne({where: {channelId: id}, relations: {team: true}})
+    }
+
+    @Transactional()
+    findByTeamSlackId(teamId: string) {
+        return this.channelRepository.find({where: {team: {teamId}}, order: {id: 'ASC'}})
     }
 
     @Transactional()

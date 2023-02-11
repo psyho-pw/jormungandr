@@ -31,13 +31,13 @@ export class MessageService {
     }
 
     @Transactional()
-    findOne(id: number): Promise<Message | null> {
-        return this.messageRepository.findOneBy({id})
+    findOne(id: number) {
+        return this.messageRepository.findOne({where: {id}, relations: {user: true, team: true}})
     }
 
     @Transactional()
     findByChannelIdAndTimestamp(channelId: number, timestamp: string): Promise<Message | null> {
-        return this.messageRepository.findOneBy({timestamp, channel: {id: channelId}})
+        return this.messageRepository.findOne({where: {timestamp, channel: {id: channelId}}, relations: {user: true, team: true}})
     }
 
     @Transactional()

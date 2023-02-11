@@ -22,7 +22,7 @@ jobs:
           username: centos
           script: |
             whoami
-            cd /home/centos/server/toys-server
+            cd /home/centos/server/jormungandr
             git checkout main
             git fetch --all
             git reset --hard origin/main

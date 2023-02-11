@@ -1,4 +1,4 @@
-name: toys-server CD
+name: jormungandr-server CD
 
 on:
   push:

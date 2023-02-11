@@ -3,7 +3,7 @@ import {TeamService} from '../team/team.service'
 import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
-import {Inject, Injectable} from '@nestjs/common'
+import {HttpException, Inject, Injectable} from '@nestjs/common'
 import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, SayFn, StaticSelectAction} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
@@ -69,37 +69,19 @@ export class SlackService {
 
             await say({
                 blocks: [
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `:stopwatch: current core time is between ${team.coreTimeStart} ~ ${team.coreTimeEnd}`,
-                        },
-                    },
+                    {type: 'section', text: {type: 'mrkdwn', text: `:stopwatch: current core time is between ${team.coreTimeStart} ~ ${team.coreTimeEnd}`}},
                     {
                         type: 'actions',
                         elements: [
                             {
                                 type: 'static_select',
-                                initial_option: {
-                                    text: {
-                                        type: 'plain_text',
-                                        text: team.coreTimeStart.toString(),
-                                    },
-                                    value: team.coreTimeStart.toString(),
-                                },
+                                initial_option: {text: {type: 'plain_text', text: team.coreTimeStart.toString()}, value: team.coreTimeStart.toString()},
                                 options: options,
                                 action_id: 'coretime_start_change',
                             },
                             {
                                 type: 'static_select',
-                                initial_option: {
-                                    text: {
-                                        type: 'plain_text',
-                                        text: team.coreTimeEnd.toString(),
-                                    },
-                                    value: team.coreTimeEnd.toString(),
-                                },
+                                initial_option: {text: {type: 'plain_text', text: team.coreTimeEnd.toString()}, value: team.coreTimeEnd.toString()},
                                 options: options,
                                 action_id: 'coretime_end_change',
                             },
@@ -124,10 +106,7 @@ export class SlackService {
                 view: {
                     type: 'modal',
                     callback_id: 'max_respond_time_view',
-                    title: {
-                        type: 'plain_text',
-                        text: 'Set max respond time',
-                    },
+                    title: {type: 'plain_text', text: 'Set max respond time'},
                     blocks: [
                         {
                             type: 'input',
@@ -138,22 +117,12 @@ export class SlackService {
                                 action_id: 'number_input-action',
                                 min_value: '180',
                                 max_value: '1800',
-                                placeholder: {
-                                    type: 'plain_text',
-                                    text: '최대로 설정할 반응 시간을 초단위로 입력',
-                                },
+                                placeholder: {type: 'plain_text', text: '최대로 설정할 반응 시간을 초단위로 입력'},
                             },
-                            label: {
-                                type: 'plain_text',
-                                text: `:stopwatch: current max respond time is ${team.maxRespondTime} (seconds)`,
-                                emoji: true,
-                            },
+                            label: {type: 'plain_text', text: `:stopwatch: current max respond time is ${team.maxRespondTime} (seconds)`, emoji: true},
                         },
                     ],
-                    submit: {
-                        type: 'plain_text',
-                        text: 'Submit',
-                    },
+                    submit: {type: 'plain_text', text: 'Submit'},
                 },
             })
 
@@ -167,30 +136,14 @@ export class SlackService {
 
             const channels = await this.channelService.findByTeamSlackId(body.team_id)
 
-            console.log(currentYear, currentMonth)
-
             const yearOptions: PlainTextOption[] = []
             for (let diff = 0; diff < 10; diff++) {
                 const yearStr = (currentYear - diff).toString()
-                yearOptions.push({
-                    text: {
-                        type: 'plain_text',
-                        text: yearStr,
-                    },
-                    value: yearStr,
-                })
+                yearOptions.push({text: {type: 'plain_text', text: yearStr}, value: yearStr})
             }
 
             const monthOptions: PlainTextOption[] = []
-            for (let month = 1; month < 12; month++) {
-                monthOptions.push({
-                    text: {
-                        type: 'plain_text',
-                        text: month.toString(),
-                    },
-                    value: month.toString(),
-                })
-            }
+            for (let month = 1; month < 12; month++) monthOptions.push({text: {type: 'plain_text', text: month.toString()}, value: month.toString()})
 
             try {
                 await client.views.open({
@@ -199,50 +152,29 @@ export class SlackService {
                     view: {
                         type: 'modal',
                         callback_id: 'statistics_view',
-                        title: {
-                            type: 'plain_text',
-                            text: 'Enter target year/month',
-                        },
+                        title: {type: 'plain_text', text: 'Enter target year/month'},
                         blocks: [
                             {
                                 type: 'input',
                                 block_id: 'year_select_block',
                                 element: {
                                     type: 'static_select',
-                                    initial_option: {
-                                        text: {
-                                            type: 'plain_text',
-                                            text: currentYear.toString(),
-                                        },
-                                        value: currentYear.toString(),
-                                    },
+                                    initial_option: {text: {type: 'plain_text', text: currentYear.toString()}, value: currentYear.toString()},
                                     options: yearOptions,
                                     action_id: 'year_select_action',
                                 },
-                                label: {
-                                    type: 'plain_text',
-                                    text: 'Year',
-                                },
+                                label: {type: 'plain_text', text: 'Year'},
                             },
                             {
                                 type: 'input',
                                 block_id: 'month_select_block',
                                 element: {
                                     type: 'static_select',
-                                    initial_option: {
-                                        text: {
-                                            type: 'plain_text',
-                                            text: currentMonth.toString(),
-                                        },
-                                        value: currentMonth.toString(),
-                                    },
+                                    initial_option: {text: {type: 'plain_text', text: currentMonth.toString()}, value: currentMonth.toString()},
                                     options: monthOptions,
                                     action_id: 'month_select_action',
                                 },
-                                label: {
-                                    type: 'plain_text',
-                                    text: 'Month',
-                                },
+                                label: {type: 'plain_text', text: 'Month'},
                             },
                             {
                                 type: 'input',
@@ -250,30 +182,20 @@ export class SlackService {
                                 element: {
                                     type: 'static_select',
                                     initial_option: {
-                                        text: {
-                                            type: 'plain_text',
-                                            text: channels.filter(e => e.channelId === body.channel_id)[0].name,
-                                        },
+                                        text: {type: 'plain_text', text: channels.filter(e => e.channelId === body.channel_id)[0].name},
                                         value: body.channel_id,
                                     },
                                     options: channels.map((channel): PlainTextOption => ({text: {type: 'plain_text', text: channel.name}, value: channel.channelId})),
                                     action_id: 'channel_select_action',
                                 },
-                                label: {
-                                    type: 'plain_text',
-                                    text: 'Channel to post',
-                                },
+                                label: {type: 'plain_text', text: 'Channel to post'},
                             },
                         ],
-                        submit: {
-                            type: 'plain_text',
-                            text: 'Submit',
-                        },
+                        submit: {type: 'plain_text', text: 'Submit'},
                     },
                 })
             } catch (err) {
-                console.log(err)
-                console.log(err.data)
+                this.logger.error(err.data)
             } finally {
                 await ack()
             }
@@ -368,14 +290,11 @@ export class SlackService {
         })
 
         this.#slackBotInstance.view('statistics_view', async ({ack, context, view, client, body, payload}) => {
-            console.log(payload)
-            console.log(payload.state.values['year_select_block'])
             const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
             const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
             const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
-            console.log(year, month, channel)
+
             const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
-            console.log(statistics)
 
             const blocks = statistics.map((user: any, idx: number) => {
                 return {
@@ -396,23 +315,11 @@ export class SlackService {
                 await client.chat.postMessage({
                     text: ':chart_with_upwards_trend:',
                     icon_emoji: 'true',
-                    blocks: [
-                        {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: `*${year}년 ${month}월* 통계`,
-                            },
-                        },
-                        {
-                            type: 'divider',
-                        },
-                        ...blocks,
-                    ],
+                    blocks: [{type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}}, {type: 'divider'}, ...blocks],
                     channel,
                 })
             } catch (err) {
-                console.log(err.data)
+                this.logger.error(err.data)
             } finally {
                 await ack()
             }
@@ -595,8 +502,6 @@ export class SlackService {
             await this.sendSlackApiError(new Error(`slack api error - ${this.fetchUsers.name}`))
             return
         }
-
-        console.log(response.members)
 
         for (const user of response.members) {
             if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id) {

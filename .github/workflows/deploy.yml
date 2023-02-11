@@ -1,20 +1,20 @@
 name: toys-server CD
 
-on: 
+on:
   push:
     branches: [main, release/**]
 jobs:
   deploy:
     runs-on: ubuntu-latest
     #needs: test
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.5.0
-      
+
       - name: Deploy production
         uses: appleboy/ssh-action@v0.1.5
-        
+
         with:
           script_stop: true
           key: ${{ secrets.KEY }}
@@ -30,15 +30,15 @@ jobs:
             export NODE_ENV=development && yarn
             yarn run build
             export NODE_ENV=production && pm2 reload 5
-            
+
       - name: Notify on SUCCESS
         if: ${{ success() }}
-        uses: ./.github/actions/notifier
+        uses: ./.github/actions/notification
         with:
           status: SUCCESS
 
       - name: Notify on FAIL
         if: ${{ failure() }}
-        uses: ./.github/actions/notifier
-        
-      
+        uses: ./.github/actions/notification
+
+

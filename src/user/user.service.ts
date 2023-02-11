@@ -20,6 +20,7 @@ export class UserService {
         user.realName = createUserDto.realName
         user.phone = createUserDto.phone
         user.timeZone = createUserDto.timeZone
+        user.profileImage = createUserDto.profileImage
         return this.userRepository.save(user)
     }
 
@@ -40,8 +41,7 @@ export class UserService {
 
     @Transactional()
     update(id: number, updateUserDto: UpdateUserDto) {
-        console.log(updateUserDto)
-        return `This action updates a #${id} user`
+        return this.userRepository.update(id, updateUserDto)
     }
 
     @Transactional()

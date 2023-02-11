@@ -163,7 +163,7 @@ export class SlackService {
         this.#slackBotInstance.command('/statistics', async ({ack, say, context, client, body}) => {
             const now = new Date()
             const currentYear = now.getFullYear()
-            const currentMonth = now.getMonth()
+            const currentMonth = now.getMonth() + 1
 
             const channels = await this.channelService.findByTeamSlackId(body.team_id)
 
@@ -374,9 +374,41 @@ export class SlackService {
             const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
             const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
             console.log(year, month, channel)
+            const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
+            console.log(statistics)
+
+            const blocks = statistics.map((user: any, idx: number) => {
+                return {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${user.average} seconds\n Ipsum Lorem ipsum`,
+                    },
+                    accessory: {
+                        type: 'image',
+                        image_url: user.profileImage || 'https://cdn.mos.cms.futurecdn.net/SDDw7CnuoUGax6x9mTo7dd-1920-80.jpg.webp',
+                        alt_text: 'alt text for image',
+                    },
+                }
+            })
+
             try {
                 await client.chat.postMessage({
-                    text: 'statistics_view',
+                    text: ':chart_with_upwards_trend:',
+                    icon_emoji: 'true',
+                    blocks: [
+                        {
+                            type: 'section',
+                            text: {
+                                type: 'mrkdwn',
+                                text: `*${year}년 ${month}월* 통계`,
+                            },
+                        },
+                        {
+                            type: 'divider',
+                        },
+                        ...blocks,
+                    ],
                     channel,
                 })
             } catch (err) {
@@ -564,6 +596,8 @@ export class SlackService {
             return
         }
 
+        console.log(response.members)
+
         for (const user of response.members) {
             if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id) {
                 this.logger.error('user is not qualified', user)
@@ -572,7 +606,12 @@ export class SlackService {
 
             const check = await this.userService.findBySlackId(user.id)
             if (check) {
-                //TODO update user when info mismatches
+                if (check.name !== user.name || check.realName !== user.real_name || check.profileImage !== user.profile?.image_original) {
+                    await this.userService.update(check.id, {
+                        name: check.name,
+                        profileImage: user.profile?.image_original || null,
+                    })
+                }
                 continue
             }
 
@@ -589,6 +628,7 @@ export class SlackService {
                 realName: user.real_name || '',
                 phone: user.profile?.phone || null,
                 timeZone: user.tz || '',
+                profileImage: user.profile?.image_original || null,
             })
         }
     }

@@ -19,4 +19,8 @@ export class CreateUserDto {
 
     @IsString()
     timeZone: string
+
+    @IsOptional()
+    @IsString()
+    profileImage: string | null
 }

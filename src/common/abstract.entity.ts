@@ -12,7 +12,7 @@ export abstract class AbstractEntity {
     updatedAt: Date
 
     @DeleteDateColumn()
-    deletedAt: Date
+    deletedAt: Date | null
 }
 
 export abstract class AbstractActorEntity extends AbstractEntity {

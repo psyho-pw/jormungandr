@@ -3,14 +3,15 @@ import {TeamService} from '../team/team.service'
 import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
-import {HttpException, Inject, Injectable} from '@nestjs/common'
-import {App, GenericMessageEvent, LogLevel, ReactionAddedEvent, RespondFn, SayFn, StaticSelectAction} from '@slack/bolt'
+import {Inject, Injectable} from '@nestjs/common'
+import {App, CodedError, GenericMessageEvent, ReactionAddedEvent, SayFn, StaticSelectAction} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
 import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
+import {SlackException} from '../common/exceptions/slack.exception'
 
 @Injectable()
 export class SlackService {
@@ -45,19 +46,25 @@ export class SlackService {
             .start()
             .then(() => this.logger.verbose('✅  SlackModule instance initialized'))
             .catch(error => {
-                this.logger.error('error caught', error)
-                discordService.sendMessage(SlackService.name, 'initialization error', error).then()
+                this.logger.error('initialization error', error)
+                this.sendSlackApiError(error).then()
             })
+
+        this.#slackBotInstance.error(async (error: CodedError) => {
+            this.logger.error(error)
+            await this.sendSlackApiError(error)
+        })
     }
 
     private registerCommands() {
-        //TODO serve statistics by slash command
-
         this.#slackBotInstance.command('/coretime', async ({ack, context, say}) => {
-            const team = await this.teamService.findOneBySlackId(context.teamId!)
+            if (!context.teamId) throw new SlackException(this.registerCommands.name, 'context does not have teamId')
+
+            const team = await this.teamService.findOneBySlackId(context.teamId)
             if (!team) {
-                await say("team doesn't exist in our database yet")
-                return
+                const errMsg = "Team doesn't exist in our database yet"
+                await say(errMsg)
+                throw new SlackException(this.registerCommands.name, errMsg)
             }
 
             const options: PlainTextOption[] = Array(25)
@@ -93,11 +100,14 @@ export class SlackService {
             await ack()
         })
 
-        this.#slackBotInstance.command('/respond-time', async ({ack, say, context, respond, client, body}) => {
-            const team = await this.teamService.findOneBySlackId(context.teamId!)
+        this.#slackBotInstance.command('/respond-time', async ({ack, say, context, client, body}) => {
+            if (!context.teamId) throw new SlackException(this.registerCommands.name, 'context does not have teamId')
+
+            const team = await this.teamService.findOneBySlackId(context.teamId)
             if (!team) {
-                await say("team doesn't exist in our database yet")
-                return
+                const errMsg = "Team doesn't exist in our database yet"
+                await say(errMsg)
+                throw new SlackException(this.registerCommands.name, errMsg)
             }
 
             await client.views.open({
@@ -125,11 +135,10 @@ export class SlackService {
                     submit: {type: 'plain_text', text: 'Submit'},
                 },
             })
-
             await ack()
         })
 
-        this.#slackBotInstance.command('/statistics', async ({ack, say, context, client, body}) => {
+        this.#slackBotInstance.command('/statistics', async ({ack, client, body}) => {
             const now = new Date()
             const currentYear = now.getFullYear()
             const currentMonth = now.getMonth() + 1
@@ -145,97 +154,91 @@ export class SlackService {
             const monthOptions: PlainTextOption[] = []
             for (let month = 1; month < 12; month++) monthOptions.push({text: {type: 'plain_text', text: month.toString()}, value: month.toString()})
 
-            try {
-                await client.views.open({
-                    token: this.configService.getSlackConfig().TOKEN,
-                    trigger_id: body.trigger_id,
-                    view: {
-                        type: 'modal',
-                        callback_id: 'statistics_view',
-                        title: {type: 'plain_text', text: 'Enter target year/month'},
-                        blocks: [
-                            {
-                                type: 'input',
-                                block_id: 'year_select_block',
-                                element: {
-                                    type: 'static_select',
-                                    initial_option: {text: {type: 'plain_text', text: currentYear.toString()}, value: currentYear.toString()},
-                                    options: yearOptions,
-                                    action_id: 'year_select_action',
-                                },
-                                label: {type: 'plain_text', text: 'Year'},
+            await client.views.open({
+                token: this.configService.getSlackConfig().TOKEN,
+                trigger_id: body.trigger_id,
+                view: {
+                    type: 'modal',
+                    callback_id: 'statistics_view',
+                    title: {type: 'plain_text', text: 'Enter target year/month'},
+                    blocks: [
+                        {
+                            type: 'input',
+                            block_id: 'year_select_block',
+                            element: {
+                                type: 'static_select',
+                                initial_option: {text: {type: 'plain_text', text: currentYear.toString()}, value: currentYear.toString()},
+                                options: yearOptions,
+                                action_id: 'year_select_action',
                             },
-                            {
-                                type: 'input',
-                                block_id: 'month_select_block',
-                                element: {
-                                    type: 'static_select',
-                                    initial_option: {text: {type: 'plain_text', text: currentMonth.toString()}, value: currentMonth.toString()},
-                                    options: monthOptions,
-                                    action_id: 'month_select_action',
-                                },
-                                label: {type: 'plain_text', text: 'Month'},
+                            label: {type: 'plain_text', text: 'Year'},
+                        },
+                        {
+                            type: 'input',
+                            block_id: 'month_select_block',
+                            element: {
+                                type: 'static_select',
+                                initial_option: {text: {type: 'plain_text', text: currentMonth.toString()}, value: currentMonth.toString()},
+                                options: monthOptions,
+                                action_id: 'month_select_action',
                             },
-                            {
-                                type: 'input',
-                                block_id: 'channel_select_block',
-                                element: {
-                                    type: 'static_select',
-                                    initial_option: {
-                                        text: {type: 'plain_text', text: channels.filter(e => e.channelId === body.channel_id)[0].name},
-                                        value: body.channel_id,
-                                    },
-                                    options: channels.map((channel): PlainTextOption => ({text: {type: 'plain_text', text: channel.name}, value: channel.channelId})),
-                                    action_id: 'channel_select_action',
+                            label: {type: 'plain_text', text: 'Month'},
+                        },
+                        {
+                            type: 'input',
+                            block_id: 'channel_select_block',
+                            element: {
+                                type: 'static_select',
+                                initial_option: {
+                                    text: {type: 'plain_text', text: channels.filter(e => e.channelId === body.channel_id)[0].name},
+                                    value: body.channel_id,
                                 },
-                                label: {type: 'plain_text', text: 'Channel to post'},
+                                options: channels.map((channel): PlainTextOption => ({text: {type: 'plain_text', text: channel.name}, value: channel.channelId})),
+                                action_id: 'channel_select_action',
                             },
-                        ],
-                        submit: {type: 'plain_text', text: 'Submit'},
-                    },
-                })
-            } catch (err) {
-                this.logger.error(err.data)
-            } finally {
-                await ack()
-            }
+                            label: {type: 'plain_text', text: 'Channel to post'},
+                        },
+                    ],
+                    submit: {type: 'plain_text', text: 'Submit'},
+                },
+            })
+            await ack()
         })
     }
 
     private registerActionHandler() {
-        this.#slackBotInstance.action('coretime_start_change', async ({ack, respond, action, context, say}) => {
+        this.#slackBotInstance.action('coretime_start_change', async ({ack, action, context, say}) => {
             action = action as StaticSelectAction
-            await this.handleAction('coreTimeStart', action, context.teamId, respond, say)
+            await this.handleAction('coreTimeStart', action, context.teamId, say)
             await ack()
         })
 
-        this.#slackBotInstance.action('coretime_end_change', async ({ack, respond, action, context, say}) => {
+        this.#slackBotInstance.action('coretime_end_change', async ({ack, action, context, say}) => {
             action = action as StaticSelectAction
-            await this.handleAction('coreTimeEnd', action, context.teamId, respond, say)
+            await this.handleAction('coreTimeEnd', action, context.teamId, say)
             await ack()
         })
     }
 
     @Transactional()
-    private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string | undefined, respond: RespondFn, say: SayFn) {
-        if (!teamId) {
-            await respond('error')
-            return
-        }
+    private async handleAction(columnType: 'coreTimeStart' | 'coreTimeEnd', action: StaticSelectAction, teamId: string | undefined, say: SayFn) {
+        if (!teamId) throw new SlackException(this.handleAction.name, `teamId is required`)
+
         const value = +action.selected_option.value
         await this.teamService.updateTeamBySlackId(teamId, {[columnType]: value})
         await say(`core time ${columnType === 'coreTimeStart' ? 'start' : 'end'} hour changed to ${action.selected_option.value}`)
     }
 
     private registerMessageEventListener() {
-        this.#slackBotInstance.message(/.*/, async ({message, client, context, event, payload, say}) => {
+        this.#slackBotInstance.message(/.*/, async ({message, client, context}) => {
             message = message as GenericMessageEvent
             if (message.subtype) return
 
             const teamId = context.teamId
             if (!teamId) {
-                this.logger.error('team not found')
-                return
+                const errMsg = 'Team not found in message context'
+                this.logger.error(errMsg)
+                throw new SlackException(this.handleAction.name, errMsg)
             }
 
             if (message.thread_ts) {
@@ -244,10 +247,8 @@ export class SlackService {
             }
 
             const channelMembersResponse = await client.conversations.members({channel: message.channel})
-            if (!channelMembersResponse.ok) {
-                await this.sendSlackApiError(new Error('channel member api error'))
-                return
-            }
+            if (!channelMembersResponse.ok) throw new SlackException(this.handleAction.name, 'Slack api error - channel member')
+
             const channelMembers = channelMembersResponse.members || []
             await this.onMessage(message, teamId, channelMembers)
         })
@@ -258,9 +259,9 @@ export class SlackService {
             await this.onEmojiRespond(event)
         })
 
-        this.#slackBotInstance.event('reaction_removed', async ({event, client}) => {
+        this.#slackBotInstance.event('reaction_removed', async ({event}) => {
             //TODO when removed?
-            console.log('removed')
+            console.log('removed', event)
         })
     }
 
@@ -268,28 +269,19 @@ export class SlackService {
         this.#slackBotInstance.view('max_respond_time_view', async ({ack, context, view, client, body}) => {
             await ack()
             if (!context.teamId) {
-                await client.chat.postMessage({
-                    text: "team doesn't exist in our database yet",
-                    channel: body.user.id,
-                })
+                await client.chat.postMessage({text: "team doesn't exist in our database yet", channel: body.user.id})
                 return
             }
 
             const inputValue = view.state.values['max_respond_time_block']['number_input-action'].value
-            if (!inputValue) {
-                await this.sendSlackApiError(new Error('input value is empty'))
-                return
-            }
+            if (!inputValue) throw new SlackException(this.registerViewSubmissionListener.name, 'input value is empty')
 
             await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
 
-            await client.chat.postMessage({
-                text: 'max respond time is now ' + inputValue,
-                channel: body.user.id,
-            })
+            await client.chat.postMessage({text: 'max respond time is now ' + inputValue, channel: body.user.id})
         })
 
-        this.#slackBotInstance.view('statistics_view', async ({ack, context, view, client, body, payload}) => {
+        this.#slackBotInstance.view('statistics_view', async ({ack, client, body, payload}) => {
             const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
             const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
             const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
@@ -299,10 +291,7 @@ export class SlackService {
             const blocks = statistics.map((user: any, idx: number) => {
                 return {
                     type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${user.average} seconds\n Ipsum Lorem ipsum`,
-                    },
+                    text: {type: 'mrkdwn', text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${user.average} seconds\n Ipsum Lorem ipsum`},
                     accessory: {
                         type: 'image',
                         image_url: user.profileImage || 'https://cdn.mos.cms.futurecdn.net/SDDw7CnuoUGax6x9mTo7dd-1920-80.jpg.webp',
@@ -311,23 +300,25 @@ export class SlackService {
                 }
             })
 
-            try {
-                await client.chat.postMessage({
-                    text: ':chart_with_upwards_trend:',
-                    icon_emoji: 'true',
-                    blocks: [{type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}}, {type: 'divider'}, ...blocks],
-                    channel,
-                })
-            } catch (err) {
-                this.logger.error(err.data)
-            } finally {
-                await ack()
-            }
+            await client.chat.postMessage({
+                text: ':chart_with_upwards_trend:',
+                icon_emoji: 'true',
+                blocks: [{type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}}, {type: 'divider'}, ...blocks],
+                channel,
+            })
+            await ack()
         })
     }
 
-    private async sendSlackApiError(error: any) {
-        return this.discordService.sendMessage(SlackService.name, error.message, [{name: 'stack', value: error.stack.substr(0, 1024)}])
+    private async sendSlackApiError(error: CodedError) {
+        const original = error.original as any
+        let scope: string
+        if (original?.status) {
+            const response = original.getResponse()
+            scope = `${response.callClass}.${response.callMethod}`
+        } else scope = `${SlackService.name}.unhandledException`
+
+        return this.discordService.sendMessage(error.message, scope, [{name: 'stack', value: error.stack?.substring(0, 1024) || ''}])
     }
 
     private async isCoreTime(teamId: string): Promise<boolean> {
@@ -347,22 +338,13 @@ export class SlackService {
 
         const slackUserId = message.user
         const user = await this.userService.findBySlackId(slackUserId)
-        if (!user) {
-            await this.sendSlackApiError(new Error(`user not found`))
-            return
-        }
+        if (!user) throw new SlackException(this.onMessage.name, `user not found`)
 
         const team = await this.teamService.findOneBySlackId(teamId)
-        if (!team) {
-            await this.sendSlackApiError(new Error(`team not found`))
-            return
-        }
+        if (!team) throw new SlackException(this.onMessage.name, `team not found`)
 
         const channel = await this.channelService.findOneBySlackId(message.channel)
-        if (!channel) {
-            await this.sendSlackApiError(new Error(`channel not found`))
-            return
-        }
+        if (!channel) throw new SlackException(this.onMessage.name, `channel not found`)
 
         const msg = await this.messageService.create({
             messageId: message.client_msg_id || '',
@@ -394,16 +376,10 @@ export class SlackService {
         }
 
         const channel = await this.channelService.findOneBySlackId(message.channel)
-        if (!channel) {
-            await this.sendSlackApiError(new Error(`thread reply message user not found`))
-            return
-        }
+        if (!channel) throw new SlackException(this.onThreadMessage.name, `thread reply message user not found`)
 
         const parentMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, message.thread_ts as string)
-        if (!parentMessage) {
-            await this.sendSlackApiError(new Error(`parent message not found`))
-            return
-        }
+        if (!parentMessage) throw new SlackException(this.onThreadMessage.name, `parent message not found`)
 
         if (parentMessage.user.slackId === message.user) {
             this.logger.verbose('thread message to self, skipping ...')
@@ -419,15 +395,10 @@ export class SlackService {
         if (event.item.type !== 'message') return
 
         const channel = await this.channelService.findOneBySlackId(event.item.channel)
-        if (!channel) {
-            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - channel not found: ${event.item.channel}`))
-            return
-        }
+        if (!channel) throw new SlackException(this.onEmojiRespond.name, `channel not found: ${event.item.channel}`)
+
         const targetMessage = await this.messageService.findByChannelIdAndTimestamp(channel.id, event.item.ts)
-        if (!targetMessage) {
-            await this.sendSlackApiError(new Error(`${this.registerReactionEventListener.name} - target message not found`))
-            return
-        }
+        if (!targetMessage) throw new SlackException(this.onEmojiRespond.name, `target message not found`)
 
         if (targetMessage.user.slackId === event.user) {
             this.logger.verbose('emoji response to self, skipping ...')
@@ -441,10 +412,8 @@ export class SlackService {
     @Transactional()
     public async fetchTeams() {
         const response = await this.#slackBotInstance.client.team.info()
-        if (!response.ok || !response.team || !response.team.id) {
-            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchTeams.name}`))
-            return
-        }
+        if (!response.ok || !response.team || !response.team.id) throw new SlackException(this.fetchTeams.name, `slack api error`)
+
         const check = await this.teamService.findOneBySlackId(response.team.id)
         if (check) {
             //TODO update user when info mismatches
@@ -461,29 +430,22 @@ export class SlackService {
     @Transactional()
     public async fetchChannels() {
         const response = await this.#slackBotInstance.client.conversations.list()
-        if (!response.ok || !response.channels) {
-            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchChannels.name}`))
-            return
-        }
+        if (!response.ok || !response.channels) throw new SlackException(this.fetchChannels.name, 'slack api error')
 
         for (const channel of response.channels) {
-            if (!channel.id || !channel.is_channel) {
-                this.logger.error('channel is not qualified', channel)
+            if (!channel.id || !channel.is_channel || channel.is_archived || !channel.context_team_id) {
+                this.logger.error('channel is not qualified (is not channel, is archived, id not found, channel context team id not found)', channel)
                 continue
             }
 
             const check = await this.channelService.findOneBySlackId(channel.id)
-
             if (check) {
                 //TODO update user when info mismatches
                 continue
             }
 
-            const team = await this.teamService.findOneBySlackId(channel.context_team_id!)
-            if (!team) {
-                await this.sendSlackApiError(new Error(`${this.fetchChannels.name} - team not found`))
-                return
-            }
+            const team = await this.teamService.findOneBySlackId(channel.context_team_id)
+            if (!team) throw new SlackException(this.fetchChannels.name, `team not found`)
 
             await this.channelService.create({
                 channelId: channel.id,
@@ -498,14 +460,11 @@ export class SlackService {
     @Transactional()
     public async fetchUsers() {
         const response = await this.#slackBotInstance.client.users.list()
-        if (!response.ok || !response.members) {
-            await this.sendSlackApiError(new Error(`slack api error - ${this.fetchUsers.name}`))
-            return
-        }
+        if (!response.ok || !response.members) throw new SlackException(this.fetchUsers.name, `slack api error`)
 
         for (const user of response.members) {
-            if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id) {
-                this.logger.error('user is not qualified', user)
+            if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id || !user.team_id) {
+                this.logger.error('user is not qualified', {id: user.id, name: user.name})
                 continue
             }
 
@@ -520,11 +479,8 @@ export class SlackService {
                 continue
             }
 
-            const team = await this.teamService.findOneBySlackId(user.team_id!)
-            if (!team) {
-                await this.sendSlackApiError(new Error(`${this.fetchChannels.name} - team not found`))
-                return
-            }
+            const team = await this.teamService.findOneBySlackId(user.team_id)
+            if (!team) throw new SlackException(this.fetchChannels.name, `team not found`)
 
             await this.userService.create({
                 slackId: user.id,

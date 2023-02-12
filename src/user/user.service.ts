@@ -31,7 +31,7 @@ export class UserService {
 
     @Transactional()
     async findBySlackId(id: string): Promise<User | null> {
-        return await this.userRepository.findOneBy({slackId: id})
+        return await this.userRepository.findOne({where: {slackId: id}, relations: {team: true}})
     }
 
     @Transactional()

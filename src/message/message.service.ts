@@ -36,8 +36,9 @@ export class MessageService {
     }
 
     @Transactional()
-    findByChannelIdAndTimestamp(channelId: number, timestamp: string): Promise<Message | null> {
-        return this.messageRepository.findOne({where: {timestamp, channel: {id: channelId}}, relations: {user: true, team: true}})
+    findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
+        console.log(channelId, timestamp)
+        return this.messageRepository.findOne({where: {timestamp, channel: {channelId: channelId}}, relations: {user: true, team: true, channel: true}})
     }
 
     @Transactional()

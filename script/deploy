@@ -1,0 +1,13 @@
+#! /bin/sh
+ssh centos@15.165.163.114 <<EOF
+
+  whoami
+  cd /home/centos/server/jormungandr
+  git checkout main
+  git fetch --all
+  git reset --hard origin/main
+  git pull origin main
+  export NODE_ENV=development && yarn
+  yarn run build
+  export NODE_ENV=production && pm2 reload 5
+EOF

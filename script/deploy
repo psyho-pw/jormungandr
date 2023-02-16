@@ -12,3 +12,6 @@ ssh centos@15.165.163.114 <<EOF
   export NODE_ENV=production && pm2 reload 5
 EOF
 
+
+
+

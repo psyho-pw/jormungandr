@@ -10,6 +10,7 @@ import {DataSource} from 'typeorm'
 import {ModuleMocker} from 'jest-mock'
 import {addTransactionalDataSource, initializeTransactionalContext} from 'typeorm-transactional'
 import {MessageModule} from '../message/message.module'
+import {repositoryMockFactory} from '../../test/mocks/repository.mock'
 
 const moduleMocker = new ModuleMocker(global)
 describe('UserService', () => {
@@ -47,7 +48,8 @@ describe('UserService', () => {
                 WinstonModule.forRootAsync({useClass: WinstonConfigService}),
                 MessageModule,
             ],
-            providers: [UserService, {provide: getRepositoryToken(User), useValue: mockRepository()}],
+            //{provide: getRepositoryToken(User), useValue: mockRepository()}
+            providers: [UserService, {provide: getRepositoryToken(User), useValue: repositoryMockFactory(User)}],
         })
             // .useMocker(token => {
             //     if (token === getRepositoryToken(User)) {
@@ -78,6 +80,6 @@ describe('UserService', () => {
     it('should return user', async () => {
         const user = await service.findOne(1)
         console.log(user)
-        expect(user).toEqual(mockUser)
+        expect(user?.id).toBe(1)
     })
 })

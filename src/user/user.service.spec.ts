@@ -13,6 +13,6 @@ describe('UserService', () => {
     })
 
     it('should be defined', () => {
-        expect(service).toBeDefined() //asd
+        expect(service).toBeDefined() //asd2
     })
 })

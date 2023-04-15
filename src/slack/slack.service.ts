@@ -215,7 +215,9 @@ export class SlackService {
                                 text: {type: 'plain_text', text: channels.filter(e => e.channelId === body.channel_id)[0].name},
                                 value: body.channel_id,
                             },
-                            options: channels.map((channel): PlainTextOption => ({text: {type: 'plain_text', text: channel.name}, value: channel.channelId})),
+                            options: channels.flatMap(
+                                (channel, idx): Array<PlainTextOption> => (idx < 100 ? [{text: {type: 'plain_text', text: channel.name}, value: channel.channelId}] : []),
+                            ),
                             action_id: 'channel_select_action',
                         },
                         label: {type: 'plain_text', text: 'Channel to post'},

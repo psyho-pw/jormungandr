@@ -13,6 +13,7 @@ import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
+import {User} from '../user/entities/user.entity'
 
 @Injectable()
 export class SlackService {
@@ -300,8 +301,12 @@ export class SlackService {
             return
         }
 
+        const userMap = new Map<string, User>()
+        const users = await this.userService.findBySlackIds(channelMembers)
+        users.forEach(user => userMap.set(user.slackId, user))
+
         const slackUserId = message.user
-        const user = await this.userService.findBySlackId(slackUserId)
+        const user = userMap.get(slackUserId)
         if (!user) throw new SlackException(this.onMessage.name, `user not found`)
 
         const channel = await this.channelService.findOneBySlackId(message.channel)
@@ -319,19 +324,23 @@ export class SlackService {
             teamId: user.team.id,
         })
 
-        await Promise.all(
-            channelMembers.map(async member => {
-                const user = await this.userService.findBySlackId(member)
-                if (!user) return
-                if (msg.user.id === user.id) return
-                return this.respondService.create({
+        const promises = channelMembers.map(async member => {
+            const user = userMap.get(member)
+            if (!user) return []
+            if (msg.user.id === user.id) return []
+            return [
+                this.respondService.makeRespond({
                     channelId: channel.id,
                     messageId: msg.id,
                     teamId: user.team.id,
                     userId: user.id,
-                })
-            }),
-        )
+                    team: user.team,
+                }),
+            ]
+        })
+
+        const responds = await Promise.all(promises).then(e => e.flat())
+        return this.respondService.createMany(responds)
     }
 
     @Transactional()

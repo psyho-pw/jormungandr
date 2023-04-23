@@ -37,13 +37,11 @@ export class MessageService {
 
     @Transactional()
     findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
-        console.log(channelId, timestamp)
         return this.messageRepository.findOne({where: {timestamp, channel: {channelId: channelId}}, relations: {user: true, team: true, channel: true}})
     }
 
     @Transactional()
     update(id: number, updateMessageDto: UpdateMessageDto) {
-        console.log(updateMessageDto)
         return `This action updates a #${id} message`
     }
 

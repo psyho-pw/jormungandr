@@ -13,6 +13,7 @@ import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
+import {Respond} from '../respond/entities/respond.entity'
 
 @Injectable()
 export class SlackService {
@@ -319,19 +320,26 @@ export class SlackService {
             teamId: user.team.id,
         })
 
-        await Promise.all(
-            channelMembers.map(async member => {
-                const user = await this.userService.findBySlackId(member)
-                if (!user) return
-                if (msg.user.id === user.id) return
-                return this.respondService.create({
+        const team = await this.teamService.findOne(user.team.id)
+        if (!team) throw new SlackException(this.onMessage.name, 'team not found')
+
+        const promises = channelMembers.map(async member => {
+            const user = await this.userService.findBySlackId(member)
+            if (!user) return []
+            if (msg.user.id === user.id) return []
+            return [
+                this.respondService.makeRespond({
                     channelId: channel.id,
                     messageId: msg.id,
                     teamId: user.team.id,
                     userId: user.id,
-                })
-            }),
-        )
+                    team,
+                }),
+            ]
+        })
+
+        const responds = await Promise.all(promises).then(e => e.flat())
+        return this.respondService.createMany(responds)
     }
 
     @Transactional()

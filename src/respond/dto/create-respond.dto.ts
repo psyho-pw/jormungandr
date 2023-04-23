@@ -1,4 +1,6 @@
 import {IsNumber} from 'class-validator'
+import {Team} from '../../team/entities/team.entity'
+import {Type} from 'class-transformer'
 
 export class CreateRespondDto {
     @IsNumber()
@@ -12,4 +14,7 @@ export class CreateRespondDto {
 
     @IsNumber()
     messageId: number
+
+    @Type(() => Team)
+    team: Team
 }

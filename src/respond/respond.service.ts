@@ -16,19 +16,28 @@ export class RespondService {
         @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
     ) {}
 
-    @Transactional()
-    async create(createRespondDto: CreateRespondDto): Promise<Respond> {
-        const team = await this.teamService.findOne(createRespondDto.teamId)
-        if (!team) throw new NotFoundException('team not found')
-
+    makeRespond(createRespondDto: CreateRespondDto) {
         const respond = new Respond()
         respond.setUser(createRespondDto.userId)
         respond.setTeam(createRespondDto.teamId)
         respond.setChannel(createRespondDto.channelId)
         respond.setMessage(createRespondDto.messageId)
-        respond.timeTaken = team.maxRespondTime
+        respond.timeTaken = createRespondDto.team.maxRespondTime
 
-        return this.respondRepository.save(respond)
+        return respond
+    }
+
+    @Transactional()
+    async create(createRespondDto: CreateRespondDto): Promise<Respond> {
+        const team = await this.teamService.findOne(createRespondDto.teamId)
+        if (!team) throw new NotFoundException('team not found')
+
+        return this.respondRepository.save(this.makeRespond(createRespondDto))
+    }
+
+    @Transactional()
+    async createMany(responds: Respond[]) {
+        return this.respondRepository.insert(responds)
     }
 
     findAll() {

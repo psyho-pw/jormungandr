@@ -45,18 +45,11 @@ export class TeamService {
     @Transactional()
     updateTeamBySlackId(id: string, updateTeamDto: UpdateTeamDto) {
         const updateQuery: QueryDeepPartialEntity<Team> = {}
-        if (updateTeamDto.coreTimeStart) updateQuery.coreTimeStart = updateTeamDto.coreTimeStart
-        if (updateTeamDto.coreTimeEnd) updateQuery.coreTimeEnd = updateTeamDto.coreTimeEnd
+        if (updateTeamDto.coreTimeStart !== undefined) updateQuery.coreTimeStart = updateTeamDto.coreTimeStart
+        if (updateTeamDto.coreTimeEnd !== undefined) updateQuery.coreTimeEnd = updateTeamDto.coreTimeEnd
         if (updateTeamDto.maxRespondTime) updateQuery.maxRespondTime = updateTeamDto.maxRespondTime
 
-        return this.teamRepository
-            .createQueryBuilder()
-            .update(Team)
-            .set(updateQuery)
-            .where('teamId = :teamId', {
-                teamId: id,
-            })
-            .execute()
+        return this.teamRepository.createQueryBuilder().update(Team).set(updateQuery).where('teamId = :teamId', {teamId: id}).execute()
     }
 
     @Transactional()

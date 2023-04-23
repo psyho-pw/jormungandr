@@ -4,7 +4,7 @@ import {CronJob} from 'cron'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {SlackService} from 'src/slack/slack.service'
 import {Logger} from 'winston'
-import { Transactional } from "typeorm-transactional";
+import {Transactional} from 'typeorm-transactional'
 
 @Injectable()
 export class CronService {

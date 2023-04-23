@@ -13,7 +13,7 @@ import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
-import {Respond} from '../respond/entities/respond.entity'
+import {User} from '../user/entities/user.entity'
 
 @Injectable()
 export class SlackService {
@@ -301,8 +301,12 @@ export class SlackService {
             return
         }
 
+        const userMap = new Map<string, User>()
+        const users = await this.userService.findBySlackIds(channelMembers)
+        users.forEach(user => userMap.set(user.slackId, user))
+
         const slackUserId = message.user
-        const user = await this.userService.findBySlackId(slackUserId)
+        const user = userMap.get(slackUserId)
         if (!user) throw new SlackException(this.onMessage.name, `user not found`)
 
         const channel = await this.channelService.findOneBySlackId(message.channel)
@@ -320,11 +324,8 @@ export class SlackService {
             teamId: user.team.id,
         })
 
-        const team = await this.teamService.findOne(user.team.id)
-        if (!team) throw new SlackException(this.onMessage.name, 'team not found')
-
         const promises = channelMembers.map(async member => {
-            const user = await this.userService.findBySlackId(member)
+            const user = userMap.get(member)
             if (!user) return []
             if (msg.user.id === user.id) return []
             return [
@@ -333,7 +334,7 @@ export class SlackService {
                     messageId: msg.id,
                     teamId: user.team.id,
                     userId: user.id,
-                    team,
+                    team: user.team,
                 }),
             ]
         })

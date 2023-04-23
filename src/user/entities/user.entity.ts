@@ -1,6 +1,6 @@
 import {AbstractEntity} from 'src/common/abstract.entity'
 import {Team} from 'src/team/entities/team.entity'
-import {Column, Entity, Index, ManyToOne} from 'typeorm'
+import {Column, Entity, Index, ManyToOne, JoinColumn} from 'typeorm'
 
 @Entity()
 export class User extends AbstractEntity {
@@ -8,8 +8,12 @@ export class User extends AbstractEntity {
     @Column({type: String})
     slackId: string
 
+    @Column({nullable: true})
+    teamId: number
+
     @Index()
     @ManyToOne(() => Team)
+    @JoinColumn()
     team: Team
 
     @Column({type: String})

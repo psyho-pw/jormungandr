@@ -31,7 +31,12 @@ export class UserService {
 
     @Transactional()
     async findBySlackId(id: string): Promise<User | null> {
-        return await this.userRepository.findOne({where: {slackId: id}, relations: {team: true}})
+        return this.userRepository.findOne({where: {slackId: id}, relations: {team: true}})
+    }
+
+    @Transactional()
+    async findBySlackIds(ids: string[]): Promise<User[]> {
+        return this.userRepository.createQueryBuilder('user').where('slackId IN (:id)', {id: ids}).leftJoinAndSelect('user.team', 'team').getMany()
     }
 
     @Transactional()

@@ -1,11 +1,12 @@
 import type {User} from 'src/user/entities/user.entity'
-import {CreateDateColumn, DeleteDateColumn, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Relation, UpdateDateColumn} from 'typeorm'
+import {CreateDateColumn, DeleteDateColumn, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Relation, UpdateDateColumn} from 'typeorm'
 
 export abstract class AbstractEntity {
     @PrimaryGeneratedColumn()
     id: number
 
-    @CreateDateColumn()
+    @CreateDateColumn({update: false})
+    @Index()
     createdAt: Date
 
     @UpdateDateColumn()

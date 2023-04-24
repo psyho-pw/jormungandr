@@ -59,7 +59,7 @@ export class RespondService {
             .createQueryBuilder()
             .update(Respond)
             .set({timestamp: updateRespondDto.timestamp, timeTaken: updateRespondDto.timeTaken})
-            .where('user.id = :userId AND message.id = :messageId AND timeTaken > :timeTaken', {
+            .where('user.id = :userId AND message.id <= :messageId AND timeTaken > :timeTaken', {
                 userId: updateRespondDto.userId,
                 messageId: updateRespondDto.messageId,
                 timeTaken: updateRespondDto.timeTaken,

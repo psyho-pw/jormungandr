@@ -20,7 +20,7 @@ import {Cron} from '@nestjs/schedule'
 @Injectable()
 export class SlackService {
     #slackBotInstance: App
-    static slackFetchSchedule = '0 0 * * * 1-5'
+    static slackFetchSchedule = '0 0 12 * * 1-5'
 
     constructor(
         private readonly configService: AppConfigService,

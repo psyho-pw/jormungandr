@@ -6,6 +6,7 @@ import {Team} from '../../team/entities/team.entity'
 import {Channel} from '../../channel/entities/channel.entity'
 
 @Entity()
+@Index(['user', 'message', 'timeTaken'], {unique: true})
 export class Respond extends AbstractEntity {
     @Index()
     @ManyToOne(() => Team)

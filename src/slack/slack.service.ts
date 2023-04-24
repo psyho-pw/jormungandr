@@ -381,10 +381,9 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onRespondTimeViewSubmit({ack, context, view, client, body}: SlackViewSubmitArgs) {
-        await ack()
         if (!context.teamId) {
             await client.chat.postMessage({text: "team doesn't exist in our database yet", channel: body.user.id})
-            return
+            return ack()
         }
 
         const inputValue = view.state.values['max_respond_time_block']['number_input-action'].value
@@ -393,14 +392,16 @@ export class SlackService {
         await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
 
         await client.chat.postMessage({text: 'max respond time is now ' + inputValue, channel: body.user.id})
+        return ack()
     }
 
     @SlackErrorHandler()
     @Transactional()
     private async onStatisticsViewSubmit({ack, client, payload}: SlackViewSubmitArgs) {
-        const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
-        const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
-        const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
+        const year = payload.state.values['year_select_block']['year_select_action'].selected_option?.value
+        const month = payload.state.values['month_select_block']['month_select_action'].selected_option?.value
+        const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option?.value
+        if (!channel || !year || !month) throw new SlackException('invalid input value(s)')
 
         const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
 

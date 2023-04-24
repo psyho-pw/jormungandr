@@ -80,7 +80,7 @@ export class RespondService {
             ) as avgTable 
             JOIN user on avgTable.userId = user.id
             ORDER BY average, userId
-            LIMIT 5;
+            LIMIT 3;
         `,
             [teamId, `${year}-${month}`],
         )

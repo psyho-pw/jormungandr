@@ -10,14 +10,23 @@ import {Transactional} from 'typeorm-transactional'
 export class ChannelService {
     constructor(@InjectRepository(Channel) private readonly channelRepository: Repository<Channel>) {}
 
-    @Transactional()
-    create(createChannelDto: CreateChannelDto) {
+    makeChannel(createChannelDto: CreateChannelDto) {
         const channel = new Channel()
         channel.channelId = createChannelDto.channelId
         channel.name = createChannelDto.name
         channel.setTeam(createChannelDto.teamId)
 
-        return this.channelRepository.save(channel)
+        return channel
+    }
+
+    @Transactional()
+    async create(createChannelDto: CreateChannelDto) {
+        return this.channelRepository.save(this.makeChannel(createChannelDto))
+    }
+
+    @Transactional()
+    async createMany(channels: Channel[]) {
+        return this.channelRepository.insert(channels)
     }
 
     @Transactional()

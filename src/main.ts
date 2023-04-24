@@ -3,7 +3,6 @@ import {NestFactory, Reflector} from '@nestjs/core'
 import {WINSTON_MODULE_NEST_PROVIDER} from 'nest-winston'
 import {AppModule} from './app.module'
 import {ClassSerializerInterceptor, Logger, ValidationPipe, VersioningType} from '@nestjs/common'
-import session from 'express-session'
 import {NestExpressApplication} from '@nestjs/platform-express'
 import helmet from 'helmet'
 import {initializeTransactionalContext} from 'typeorm-transactional'
@@ -18,18 +17,11 @@ async function bootstrap() {
 
     app.set('trust proxy', true)
     app.use(helmet())
-    app.use(session(serverConfig.SESSION))
     app.setGlobalPrefix('api')
     app.enableVersioning({type: VersioningType.URI})
     app.enableCors(serverConfig.CORS)
-    app.useGlobalPipes(
-        new ValidationPipe({
-            transform: true,
-            transformOptions: {enableImplicitConversion: true},
-        }),
-    )
+    app.useGlobalPipes(new ValidationPipe({transform: true, transformOptions: {enableImplicitConversion: true}}))
     app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)))
-    // app.useGlobalInterceptors(new TransformInterceptor());
     app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
     await app.listen(appConfig.PORT)
 }

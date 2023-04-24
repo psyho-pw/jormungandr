@@ -14,6 +14,7 @@ import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
 import {User} from '../user/entities/user.entity'
+import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
 
 @Injectable()
 export class SlackService {
@@ -79,13 +80,13 @@ export class SlackService {
 
     @Transactional()
     private async onCoreTimeCommand({ack, context, say}: SlackCommandArgs): Promise<void> {
-        if (!context.teamId) throw new SlackException(this.onCoreTimeCommand.name, 'context does not have teamId')
+        if (!context.teamId) throw new SlackException('context does not have teamId')
 
         const team = await this.teamService.findOneBySlackId(context.teamId)
         if (!team) {
             const errMsg = "Team doesn't exist in our database yet"
             await say(errMsg)
-            throw new SlackException(this.onCoreTimeCommand.name, errMsg)
+            throw new SlackException(errMsg)
         }
 
         const options: PlainTextOption[] = Array(25)
@@ -123,13 +124,13 @@ export class SlackService {
 
     @Transactional()
     private async onRespondTimeCommand({ack, say, context, client, body}: SlackCommandArgs) {
-        if (!context.teamId) throw new SlackException(this.onRespondTimeCommand.name, 'context does not have teamId')
+        if (!context.teamId) throw new SlackException('context does not have teamId')
 
         const team = await this.teamService.findOneBySlackId(context.teamId)
         if (!team) {
             const errMsg = "Team doesn't exist in our database yet"
             await say(errMsg)
-            throw new SlackException(this.onRespondTimeCommand.name, errMsg)
+            throw new SlackException(errMsg)
         }
 
         await client.views.open({
@@ -232,7 +233,7 @@ export class SlackService {
 
     @Transactional()
     private async onCoretimeChange({ack, action, context, say, columnType}: SlackActionArgs) {
-        if (!context.teamId) throw new SlackException(this.onCoretimeChange.name, `teamId is required`)
+        if (!context.teamId) throw new SlackException('teamId is required')
 
         action = action as StaticSelectAction
         const value = +action.selected_option.value
@@ -251,7 +252,7 @@ export class SlackService {
         if (!teamId) {
             const errMsg = 'Team not found in message context'
             this.logger.error(errMsg)
-            throw new SlackException(this.onMessageEvent.name, errMsg)
+            throw new SlackException(errMsg)
         }
 
         if (message.thread_ts) {
@@ -260,7 +261,7 @@ export class SlackService {
         }
 
         const channelMembersResponse = await client.conversations.members({channel: message.channel})
-        if (!channelMembersResponse.ok) throw new SlackException(this.onMessageEvent.name, 'Slack api error - channel member')
+        if (!channelMembersResponse.ok) throw new SlackException('Slack api error - channel member')
 
         const channelMembers = channelMembersResponse.members || []
         await this.onMessage(message, teamId, channelMembers)
@@ -283,7 +284,7 @@ export class SlackService {
         }
 
         const parentMessage = await this.messageService.findByChannelIdAndTimestamp(message.channel, message.thread_ts as string)
-        if (!parentMessage) throw new SlackException(this.onThreadMessage.name, `parent message not found`)
+        if (!parentMessage) throw new SlackException('parent message not found')
 
         if (parentMessage.user.slackId === message.user) {
             this.logger.verbose('thread message to self, skipping ...')
@@ -295,6 +296,7 @@ export class SlackService {
     }
 
     @Transactional()
+    @SlackErrorHandler()
     private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
         if (!(await this.isCoreTime(teamId))) {
             this.logger.warn('Current time is not core-time')
@@ -307,10 +309,10 @@ export class SlackService {
 
         const slackUserId = message.user
         const user = userMap.get(slackUserId)
-        if (!user) throw new SlackException(this.onMessage.name, `user not found`)
+        if (!user) throw new SlackException('user not found')
 
         const channel = await this.channelService.findOneBySlackId(message.channel)
-        if (!channel) throw new SlackException(this.onMessage.name, `channel not found`)
+        if (!channel) throw new SlackException('channel not found')
 
         const msg = await this.messageService.create({
             messageId: message.client_msg_id || '',
@@ -328,15 +330,7 @@ export class SlackService {
             const user = userMap.get(member)
             if (!user) return []
             if (msg.user.id === user.id) return []
-            return [
-                this.respondService.makeRespond({
-                    channelId: channel.id,
-                    messageId: msg.id,
-                    teamId: user.team.id,
-                    userId: user.id,
-                    team: user.team,
-                }),
-            ]
+            return [this.respondService.makeRespond({channelId: channel.id, messageId: msg.id, teamId: user.team.id, userId: user.id, team: user.team})]
         })
 
         const responds = await Promise.all(promises).then(e => e.flat())
@@ -352,7 +346,7 @@ export class SlackService {
         if (event.item.type !== 'message') return
 
         const targetMessage = await this.messageService.findByChannelIdAndTimestamp(event.item.channel, event.item.ts)
-        if (!targetMessage) throw new SlackException(this.onEmojiRespond.name, `target message not found`)
+        if (!targetMessage) throw new SlackException('target message not found')
 
         if (targetMessage.user.slackId === event.user) {
             this.logger.verbose('emoji response to self, skipping ...')
@@ -372,7 +366,7 @@ export class SlackService {
         }
 
         const inputValue = view.state.values['max_respond_time_block']['number_input-action'].value
-        if (!inputValue) throw new SlackException(this.onRespondTimeViewSubmit.name, 'input value is empty')
+        if (!inputValue) throw new SlackException('input value is empty')
 
         await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
 
@@ -411,7 +405,7 @@ export class SlackService {
     @Transactional()
     public async fetchTeams() {
         const response = await this.#slackBotInstance.client.team.info()
-        if (!response.ok || !response.team || !response.team.id) throw new SlackException(this.fetchTeams.name, `slack api error`)
+        if (!response.ok || !response.team || !response.team.id) throw new SlackException('slack api error')
 
         const check = await this.teamService.findOneBySlackId(response.team.id)
         if (check) {
@@ -429,7 +423,7 @@ export class SlackService {
     @Transactional()
     public async fetchChannels() {
         const response = await this.#slackBotInstance.client.conversations.list()
-        if (!response.ok || !response.channels) throw new SlackException(this.fetchChannels.name, 'slack api error')
+        if (!response.ok || !response.channels) throw new SlackException('slack api error')
 
         for (const channel of response.channels) {
             if (!channel.id || !channel.is_channel || channel.is_archived || !channel.context_team_id) {
@@ -444,7 +438,7 @@ export class SlackService {
             }
 
             const team = await this.teamService.findOneBySlackId(channel.context_team_id)
-            if (!team) throw new SlackException(this.fetchChannels.name, `team not found`)
+            if (!team) throw new SlackException('team not found')
 
             await this.channelService.create({
                 channelId: channel.id,
@@ -459,7 +453,7 @@ export class SlackService {
     @Transactional()
     public async fetchUsers() {
         const response = await this.#slackBotInstance.client.users.list()
-        if (!response.ok || !response.members) throw new SlackException(this.fetchUsers.name, `slack api error`)
+        if (!response.ok || !response.members) throw new SlackException('slack api error')
 
         for (const user of response.members) {
             if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id || !user.team_id) {
@@ -479,7 +473,7 @@ export class SlackService {
             }
 
             const team = await this.teamService.findOneBySlackId(user.team_id)
-            if (!team) throw new SlackException(this.fetchChannels.name, `team not found`)
+            if (!team) throw new SlackException('team not found')
 
             await this.userService.create({
                 slackId: user.id,

@@ -5,6 +5,7 @@ import {HttpService} from '@nestjs/axios'
 import {EmbedBuilder, WebhookClient} from 'discord.js'
 import {APIEmbedField} from 'discord-api-types/v10'
 import {AppConfigService} from 'src/config/config.service'
+import {GeneralException} from '../common/exceptions/general.exception'
 
 @Injectable()
 export class DiscordService {
@@ -47,5 +48,14 @@ export class DiscordService {
         if (additional) embed.addFields([...additional])
 
         await this.#webhookClient.send({embeds: [embed]})
+    }
+
+    async sendErrorReport(err: any) {
+        if (err instanceof GeneralException) {
+            console.log(err.getCalledFrom())
+            await this.sendMessage(err.message, err.getCalledFrom(), [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
+            return
+        }
+        await this.sendMessage(err.message, 'Unhandled Error', [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
     }
 }

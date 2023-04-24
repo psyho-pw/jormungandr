@@ -15,10 +15,12 @@ import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
+import {Cron} from '@nestjs/schedule'
 
 @Injectable()
 export class SlackService {
     #slackBotInstance: App
+    static slackFetchSchedule = '0 0 * * * 1-5'
 
     constructor(
         private readonly configService: AppConfigService,
@@ -76,6 +78,16 @@ export class SlackService {
         } else scope = `${SlackService.name}.unhandledException`
 
         return this.discordService.sendMessage(error.message, scope, [{name: 'stack', value: error.stack?.substring(0, 1024) || ''}])
+    }
+
+    @Cron(SlackService.slackFetchSchedule)
+    @Transactional()
+    public async fetchSlackInfo() {
+        await this.fetchTeams()
+        await this.fetchChannels()
+        await this.fetchUsers()
+
+        this.logger.verbose('Slack data fetched')
     }
 
     @SlackErrorHandler()

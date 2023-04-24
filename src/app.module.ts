@@ -1,5 +1,4 @@
 import {ErrorInterceptor} from './common/interceptors/error.interceptor'
-import {CronModule} from './cron/cron.module'
 import {MessageModule} from './message/message.module'
 import {UserModule} from './user/user.module'
 import {TypeormConfigService} from './common/configServices/typeorm.config.service'
@@ -17,16 +16,17 @@ import {TypeOrmModule} from '@nestjs/typeorm'
 import {DataSource} from 'typeorm'
 import {APP_INTERCEPTOR} from '@nestjs/core'
 import {addTransactionalDataSource} from 'typeorm-transactional'
-import { ChannelModule } from './channel/channel.module';
-import { TeamModule } from './team/team.module';
-import { RespondModule } from './respond/respond.module';
+import {ChannelModule} from './channel/channel.module'
+import {TeamModule} from './team/team.module'
+import {RespondModule} from './respond/respond.module'
+import {ScheduleModule} from '@nestjs/schedule'
 
 @Module({
     imports: [
         AppConfigModule,
         TypeOrmModule.forRootAsync({useClass: TypeormConfigService}),
         WinstonModule.forRootAsync({useClass: WinstonConfigService}),
-        CronModule,
+        ScheduleModule.forRoot(),
         AdminModule,
         SlackModule,
         DiscordModule,

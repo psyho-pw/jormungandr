@@ -16,6 +16,7 @@ import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, Sla
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
 import {Cron} from '@nestjs/schedule'
+import {Channel} from '../channel/entities/channel.entity'
 
 @Injectable()
 export class SlackService {
@@ -132,7 +133,7 @@ export class SlackService {
             ],
             text: 'error',
         })
-        await ack()
+        return ack()
     }
 
     @SlackErrorHandler()
@@ -172,7 +173,7 @@ export class SlackService {
                 submit: {type: 'plain_text', text: 'Submit'},
             },
         })
-        await ack()
+        return ack()
     }
 
     @SlackErrorHandler()
@@ -243,7 +244,7 @@ export class SlackService {
                 submit: {type: 'plain_text', text: 'Submit'},
             },
         })
-        await ack()
+        return ack()
     }
 
     @SlackErrorHandler()
@@ -256,7 +257,7 @@ export class SlackService {
         await this.teamService.updateTeamBySlackId(context.teamId, {[columnType]: value})
 
         await say(`core time ${columnType === 'coreTimeStart' ? 'start' : 'end'} hour changed to ${action.selected_option.value}`)
-        await ack()
+        return ack()
     }
 
     @SlackErrorHandler()
@@ -380,10 +381,9 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onRespondTimeViewSubmit({ack, context, view, client, body}: SlackViewSubmitArgs) {
-        await ack()
         if (!context.teamId) {
             await client.chat.postMessage({text: "team doesn't exist in our database yet", channel: body.user.id})
-            return
+            return ack()
         }
 
         const inputValue = view.state.values['max_respond_time_block']['number_input-action'].value
@@ -392,14 +392,16 @@ export class SlackService {
         await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
 
         await client.chat.postMessage({text: 'max respond time is now ' + inputValue, channel: body.user.id})
+        return ack()
     }
 
     @SlackErrorHandler()
     @Transactional()
     private async onStatisticsViewSubmit({ack, client, payload}: SlackViewSubmitArgs) {
-        const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
-        const month = payload.state.values['month_select_block']['month_select_action'].selected_option!.value
-        const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option!.value
+        const year = payload.state.values['year_select_block']['year_select_action'].selected_option?.value
+        const month = payload.state.values['month_select_block']['month_select_action'].selected_option?.value
+        const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option?.value
+        if (!channel || !year || !month) throw new SlackException('invalid input value(s)')
 
         const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
 
@@ -421,7 +423,7 @@ export class SlackService {
             blocks: [{type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}}, {type: 'divider'}, ...blocks],
             channel,
         })
-        await ack()
+        return ack()
     }
 
     @SlackErrorHandler()
@@ -435,7 +437,7 @@ export class SlackService {
             //TODO update user when info mismatches
             return
         }
-        await this.teamService.create({
+        return this.teamService.create({
             teamId: response.team.id,
             name: response.team.name || '',
             url: response.team.url || '',
@@ -449,6 +451,7 @@ export class SlackService {
         const response = await this.#slackBotInstance.client.conversations.list()
         if (!response.ok || !response.channels) throw new SlackException('slack api error')
 
+        const toCreate: Channel[] = []
         for (const channel of response.channels) {
             if (!channel.id || !channel.is_channel || channel.is_archived || !channel.context_team_id) {
                 this.logger.error('channel is not qualified (is not channel, is archived, id not found, channel context team id not found)', channel)
@@ -464,12 +467,16 @@ export class SlackService {
             const team = await this.teamService.findOneBySlackId(channel.context_team_id)
             if (!team) throw new SlackException('team not found')
 
-            await this.channelService.create({
-                channelId: channel.id,
-                name: channel.name || '',
-                teamId: team.id,
-            })
+            toCreate.push(
+                this.channelService.makeChannel({
+                    channelId: channel.id,
+                    name: channel.name || '',
+                    teamId: team.id,
+                }),
+            )
         }
+
+        await this.channelService.createMany(toCreate)
 
         return response.channels
     }
@@ -480,6 +487,7 @@ export class SlackService {
         const response = await this.#slackBotInstance.client.users.list()
         if (!response.ok || !response.members) throw new SlackException('slack api error')
 
+        const toCreate: User[] = []
         for (const user of response.members) {
             if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id || !user.team_id) {
                 this.logger.error('user is not qualified', {id: user.id, name: user.name})
@@ -500,15 +508,21 @@ export class SlackService {
             const team = await this.teamService.findOneBySlackId(user.team_id)
             if (!team) throw new SlackException('team not found')
 
-            await this.userService.create({
-                slackId: user.id,
-                teamId: team.id,
-                name: user.name || '',
-                realName: user.real_name || '',
-                phone: user.profile?.phone || null,
-                timeZone: user.tz || '',
-                profileImage: user.profile?.image_original || null,
-            })
+            toCreate.push(
+                this.userService.makeUser({
+                    slackId: user.id,
+                    teamId: team.id,
+                    name: user.name || '',
+                    realName: user.real_name || '',
+                    phone: user.profile?.phone || null,
+                    timeZone: user.tz || '',
+                    profileImage: user.profile?.image_original || null,
+                }),
+            )
         }
+
+        await this.userService.createMany(toCreate)
+
+        return response.members
     }
 }

@@ -1,4 +1,4 @@
-import {MessageService} from './../message/message.service'
+import {MessageService} from '../message/message.service'
 import {Injectable} from '@nestjs/common'
 import {InjectRepository} from '@nestjs/typeorm'
 import {Repository} from 'typeorm'
@@ -11,8 +11,7 @@ import {Transactional} from 'typeorm-transactional'
 export class UserService {
     constructor(@InjectRepository(User) private userRepository: Repository<User>, private readonly messageService: MessageService) {}
 
-    @Transactional()
-    create(createUserDto: CreateUserDto) {
+    makeUser(createUserDto: CreateUserDto) {
         const user = new User()
         user.slackId = createUserDto.slackId
         user.setTeam(createUserDto.teamId)
@@ -21,7 +20,18 @@ export class UserService {
         user.phone = createUserDto.phone
         user.timeZone = createUserDto.timeZone
         user.profileImage = createUserDto.profileImage
-        return this.userRepository.save(user)
+
+        return user
+    }
+
+    @Transactional()
+    async create(createUserDto: CreateUserDto) {
+        return this.userRepository.save(this.makeUser(createUserDto))
+    }
+
+    @Transactional()
+    async createMany(users: User[]) {
+        return this.userRepository.insert(users)
     }
 
     @Transactional()

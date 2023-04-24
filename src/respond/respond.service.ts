@@ -77,8 +77,9 @@ export class RespondService {
                 FROM respond r JOIN team t on r.teamId = t.id
                 WHERE t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
                 GROUP BY r.userId
-            ) as avgTable JOIN user on avgTable.userId = user.id
-            ORDER BY average
+            ) as avgTable 
+            JOIN user on avgTable.userId = user.id
+            ORDER BY average, userId
             LIMIT 5;
         `,
             [teamId, `${year}-${month}`],

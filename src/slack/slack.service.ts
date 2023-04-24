@@ -15,13 +15,12 @@ import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
-import {Cron} from '@nestjs/schedule'
+import {Cron, CronExpression} from '@nestjs/schedule'
 import {Channel} from '../channel/entities/channel.entity'
 
 @Injectable()
 export class SlackService {
     #slackBotInstance: App
-    static slackFetchSchedule = '0 0 12 * * 1-5'
 
     constructor(
         private readonly configService: AppConfigService,
@@ -81,7 +80,7 @@ export class SlackService {
         return this.discordService.sendMessage(error.message, scope, [{name: 'stack', value: error.stack?.substring(0, 1024) || ''}])
     }
 
-    @Cron(SlackService.slackFetchSchedule)
+    @Cron(CronExpression.MONDAY_TO_FRIDAY_AT_12PM)
     @Transactional()
     public async fetchSlackInfo() {
         await this.fetchTeams()

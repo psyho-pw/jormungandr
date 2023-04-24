@@ -78,6 +78,7 @@ export class SlackService {
         return this.discordService.sendMessage(error.message, scope, [{name: 'stack', value: error.stack?.substring(0, 1024) || ''}])
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onCoreTimeCommand({ack, context, say}: SlackCommandArgs): Promise<void> {
         if (!context.teamId) throw new SlackException('context does not have teamId')
@@ -122,6 +123,7 @@ export class SlackService {
         await ack()
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onRespondTimeCommand({ack, say, context, client, body}: SlackCommandArgs) {
         if (!context.teamId) throw new SlackException('context does not have teamId')
@@ -161,6 +163,7 @@ export class SlackService {
         await ack()
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onStatisticsCommand({ack, client, body}: SlackCommandArgs) {
         const now = new Date()
@@ -231,6 +234,7 @@ export class SlackService {
         await ack()
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onCoretimeChange({ack, action, context, say, columnType}: SlackActionArgs) {
         if (!context.teamId) throw new SlackException('teamId is required')
@@ -243,6 +247,7 @@ export class SlackService {
         await ack()
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onMessageEvent({message, client, context}: SlackMessageArgs) {
         message = message as GenericMessageEvent
@@ -267,6 +272,7 @@ export class SlackService {
         await this.onMessage(message, teamId, channelMembers)
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async isCoreTime(teamId: string): Promise<boolean> {
         const team = await this.teamService.findOneBySlackId(teamId)
@@ -276,6 +282,7 @@ export class SlackService {
         return !(currentHour < team.coreTimeStart || currentHour > team.coreTimeEnd)
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onThreadMessage(message: GenericMessageEvent) {
         if (!(await this.isCoreTime(message.team || ''))) {
@@ -295,8 +302,8 @@ export class SlackService {
         return this.respondService.update({messageId: parentMessage.id, userId: parentMessage.user.id, timestamp: message.ts, timeTaken})
     }
 
-    @Transactional()
     @SlackErrorHandler()
+    @Transactional()
     private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
         if (!(await this.isCoreTime(teamId))) {
             this.logger.warn('Current time is not core-time')
@@ -337,6 +344,7 @@ export class SlackService {
         return this.respondService.createMany(responds)
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onEmojiRespond({event, context}: SlackEventArgs) {
         if (!(await this.isCoreTime(context.teamId || ''))) {
@@ -357,6 +365,7 @@ export class SlackService {
         await this.respondService.update({messageId: targetMessage.id, userId: targetMessage.user.id, timestamp: event.event_ts, timeTaken})
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onRespondTimeViewSubmit({ack, context, view, client, body}: SlackViewSubmitArgs) {
         await ack()
@@ -373,6 +382,7 @@ export class SlackService {
         await client.chat.postMessage({text: 'max respond time is now ' + inputValue, channel: body.user.id})
     }
 
+    @SlackErrorHandler()
     @Transactional()
     private async onStatisticsViewSubmit({ack, client, payload}: SlackViewSubmitArgs) {
         const year = payload.state.values['year_select_block']['year_select_action'].selected_option!.value
@@ -402,6 +412,7 @@ export class SlackService {
         await ack()
     }
 
+    @SlackErrorHandler()
     @Transactional()
     public async fetchTeams() {
         const response = await this.#slackBotInstance.client.team.info()
@@ -420,6 +431,7 @@ export class SlackService {
         })
     }
 
+    @SlackErrorHandler()
     @Transactional()
     public async fetchChannels() {
         const response = await this.#slackBotInstance.client.conversations.list()
@@ -450,6 +462,7 @@ export class SlackService {
         return response.channels
     }
 
+    @SlackErrorHandler()
     @Transactional()
     public async fetchUsers() {
         const response = await this.#slackBotInstance.client.users.list()

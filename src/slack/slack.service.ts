@@ -4,7 +4,7 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, CodedError, GenericMessageEvent, StaticSelectAction} from '@slack/bolt'
+import {App, CodedError, GenericMessageEvent, StaticSelectAction, subtype} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
@@ -12,11 +12,20 @@ import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
-import {SlackActionArgs, SlackCommandArgs, SlackEventArgs, SlackMessageArgs, SlackViewSubmitArgs} from './slack.type'
+import {
+    SlackActionArgs,
+    SlackCommandArgs,
+    SlackReactionAddEventArgs,
+    SlackMessageArgs,
+    SlackViewSubmitArgs,
+    SlackMessageDeleteEventArgs,
+    SlackReactionRemoveEventArgs,
+} from './slack.type'
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
 import {Cron, CronExpression} from '@nestjs/schedule'
 import {Channel} from '../channel/entities/channel.entity'
+import {MessageDeletedEvent, MessageEvent} from '@slack/bolt/dist/types/events/message-events'
 
 @Injectable()
 export class SlackService {
@@ -46,8 +55,10 @@ export class SlackService {
         this.#slackBotInstance.command('/statistics', args => this.onStatisticsCommand(args))
 
         this.#slackBotInstance.message(/.*/, args => this.onMessageEvent(args))
+        this.#slackBotInstance.message(subtype('message_deleted'), args => this.onMessageEvent(args))
 
         this.#slackBotInstance.event('reaction_added', args => this.onEmojiRespond(args))
+        this.#slackBotInstance.event('reaction_removed', args => this.onEmojiRemove(args))
 
         this.#slackBotInstance.action('coretime_start_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeStart'}))
         this.#slackBotInstance.action('coretime_end_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeEnd'}))
@@ -262,8 +273,14 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onMessageEvent({message, client, context}: SlackMessageArgs) {
-        message = message as GenericMessageEvent
-        if (message.subtype) return
+        if ('thread_ts' in message && message.thread_ts) {
+            this.logger.verbose('thread message. skipping...')
+            return
+        }
+        if (message.subtype) {
+            this.logger.debug('message subtype', {subtype: message.subtype})
+            return
+        }
 
         const teamId = context.teamId
         if (!teamId) {
@@ -358,7 +375,15 @@ export class SlackService {
 
     @SlackErrorHandler()
     @Transactional()
-    private async onEmojiRespond({event, context}: SlackEventArgs) {
+    async onMessageDelete({payload, event, context}: SlackMessageDeleteEventArgs) {
+        this.logger.debug('event', event)
+        this.logger.debug('context', context)
+        // const msg = await this.messageService.findBySlackId(message.)
+    }
+
+    @SlackErrorHandler()
+    @Transactional()
+    private async onEmojiRespond({event, context}: SlackReactionAddEventArgs) {
         if (!(await this.isCoreTime(context.teamId || ''))) {
             this.logger.warn('Current time is not core-time')
             return
@@ -375,6 +400,12 @@ export class SlackService {
 
         const timeTaken = +event.event_ts - +targetMessage.timestamp
         await this.respondService.update({messageId: targetMessage.id, userId: targetMessage.user.id, timestamp: event.event_ts, timeTaken})
+    }
+
+    @SlackErrorHandler()
+    @Transactional()
+    private async onEmojiRemove({event, context}: SlackReactionRemoveEventArgs) {
+        this.logger.debug('event', event)
     }
 
     @SlackErrorHandler()

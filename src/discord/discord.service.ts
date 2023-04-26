@@ -9,35 +9,35 @@ import {GeneralException} from '../common/exceptions/general.exception'
 
 @Injectable()
 export class DiscordService {
-    #webhookClient: WebhookClient
-    #webhookId: string
-    #webhookToken: string
-
-    async #getCredentials() {
-        const config = this.configService.getDiscordConfig()
-
-        if (!this.#webhookId || !this.#webhookToken) {
-            const credentials = await this.httpService.axiosRef.get(config.WEBHOOK_URL)
-            if (!credentials.data.id || !credentials.data.token) throw new Error('webhook credential fetch error')
-
-            this.#webhookId = credentials.data.id
-            this.#webhookToken = credentials.data.token
-        }
-    }
+    private webhookClient: WebhookClient
+    private webhookId: string
+    private webhookToken: string
 
     constructor(
         private readonly configService: AppConfigService,
         private readonly httpService: HttpService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
-        this.#getCredentials()
+        this.getCredentials()
             .then(() => this.logger.verbose('✅  DiscordModule instance initialized'))
             .catch(error => this.logger.error('error caught', error))
     }
 
-    async sendMessage(message: string, title?: string, additional?: Array<APIEmbedField>): Promise<void> {
-        await this.#getCredentials()
-        if (!this.#webhookClient) this.#webhookClient = new WebhookClient({id: this.#webhookId, token: this.#webhookToken})
+    private async getCredentials() {
+        const config = this.configService.getDiscordConfig()
+
+        if (!this.webhookId || !this.webhookToken) {
+            const credentials = await this.httpService.axiosRef.get(config.WEBHOOK_URL)
+            if (!credentials.data.id || !credentials.data.token) throw new Error('webhook credential fetch error')
+
+            this.webhookId = credentials.data.id
+            this.webhookToken = credentials.data.token
+        }
+    }
+
+    public async sendMessage(message: string, title?: string, additional?: Array<APIEmbedField>): Promise<void> {
+        await this.getCredentials()
+        if (!this.webhookClient) this.webhookClient = new WebhookClient({id: this.webhookId, token: this.webhookToken})
 
         const embed = new EmbedBuilder()
             .setTitle(title ? title : 'Error Report')
@@ -47,10 +47,10 @@ export class DiscordService {
 
         if (additional) embed.addFields([...additional])
 
-        await this.#webhookClient.send({embeds: [embed]})
+        await this.webhookClient.send({embeds: [embed]})
     }
 
-    async sendErrorReport(err: any) {
+    public async sendErrorReport(err: any) {
         if (err instanceof GeneralException) {
             console.log(err.getCalledFrom())
             await this.sendMessage(err.message, err.getCalledFrom(), [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])

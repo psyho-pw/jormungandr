@@ -11,7 +11,7 @@ export class MessageService {
     constructor(@InjectRepository(Message) private messageRepository: Repository<Message>) {}
 
     @Transactional()
-    async create(createMessageDto: CreateMessageDto): Promise<Message> {
+    public async create(createMessageDto: CreateMessageDto): Promise<Message> {
         const message = new Message()
         message.messageId = createMessageDto.messageId
         message.type = createMessageDto.type
@@ -26,43 +26,38 @@ export class MessageService {
     }
 
     @Transactional()
-    findAll(): Promise<Message[]> {
+    public async findAll(): Promise<Message[]> {
         return this.messageRepository.find({order: {id: 'DESC'}})
     }
 
     @Transactional()
-    findOne(id: number) {
+    public async findOne(id: number) {
         return this.messageRepository.findOne({where: {id}, relations: {user: true, team: true}})
     }
 
     @Transactional()
-    findOneByTimestampOrFail(timestamp: string) {
+    public async findOneByTimestampOrFail(timestamp: string) {
         // const result = this.messageRepository.findOne({where: {timestamp}})
         return this.messageRepository.findOneOrFail({where: {timestamp}, relations: {responds: true}})
     }
 
     @Transactional()
-    findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
+    public async findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
         return this.messageRepository.findOne({where: {timestamp, channel: {channelId: channelId}}, relations: {user: true, team: true, channel: true}})
     }
 
     @Transactional()
-    update(id: number, updateMessageDto: UpdateMessageDto) {
+    public async update(id: number, updateMessageDto: UpdateMessageDto) {
         return `This action updates a #${id} message`
     }
 
     @Transactional()
-    remove(id: number) {
+    public async remove(id: number) {
         return this.messageRepository.softDelete(id)
     }
 
     @Transactional()
-    removeByTimestamp(timestamp: string) {
-        return this.findOneByTimestampOrFail(timestamp).then(message => {
-            console.log(message)
-            return this.messageRepository.softRemove(message)
-        })
-        // return this.messageRepository.softRemove({timestamp})
-        // return this.messageRepository.softDelete({timestamp})
+    public async removeByTimestamp(timestamp: string) {
+        return this.findOneByTimestampOrFail(timestamp).then(message => this.messageRepository.softRemove(message))
     }
 }

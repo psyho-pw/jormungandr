@@ -13,7 +13,7 @@ export class TeamService {
     constructor(@InjectRepository(Team) private readonly teamRepository: Repository<Team>, private readonly configService: AppConfigService) {}
 
     @Transactional()
-    create(createTeamDto: CreateTeamDto) {
+    public async create(createTeamDto: CreateTeamDto) {
         const config = this.configService.getSlackConfig()
         const team = new Team()
         team.teamId = createTeamDto.teamId
@@ -28,22 +28,22 @@ export class TeamService {
     }
 
     @Transactional()
-    findOneBySlackId(id: string) {
+    public async findOneBySlackId(id: string) {
         return this.teamRepository.findOneBy({teamId: id})
     }
 
     @Transactional()
-    findAll() {
+    public async findAll() {
         return `This action returns all team`
     }
 
     @Transactional()
-    findOne(id: number) {
+    public async findOne(id: number) {
         return this.teamRepository.findOneBy({id})
     }
 
     @Transactional()
-    updateTeamBySlackId(id: string, updateTeamDto: UpdateTeamDto) {
+    public async updateTeamBySlackId(id: string, updateTeamDto: UpdateTeamDto) {
         const updateQuery: QueryDeepPartialEntity<Team> = {}
         if (updateTeamDto.coreTimeStart !== undefined) updateQuery.coreTimeStart = updateTeamDto.coreTimeStart
         if (updateTeamDto.coreTimeEnd !== undefined) updateQuery.coreTimeEnd = updateTeamDto.coreTimeEnd
@@ -53,7 +53,7 @@ export class TeamService {
     }
 
     @Transactional()
-    remove(id: number) {
+    public async remove(id: number) {
         return `This action removes a #${id} team`
     }
 }

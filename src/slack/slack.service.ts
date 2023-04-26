@@ -29,7 +29,7 @@ import {MessageDeletedEvent, MessageEvent} from '@slack/bolt/dist/types/events/m
 
 @Injectable()
 export class SlackService {
-    #slackBotInstance: App
+    private slackBotInstance: App
 
     constructor(
         private readonly configService: AppConfigService,
@@ -43,30 +43,30 @@ export class SlackService {
     ) {
         const config = this.configService.getSlackConfig()
 
-        this.#slackBotInstance = new App({
+        this.slackBotInstance = new App({
             appToken: config.APP_TOKEN,
             token: config.TOKEN,
             socketMode: true,
             // logLevel: LogLevel.DEBUG,
         })
 
-        this.#slackBotInstance.command('/coretime', args => this.onCoreTimeCommand(args))
-        this.#slackBotInstance.command('/respond-time', args => this.onRespondTimeCommand(args))
-        this.#slackBotInstance.command('/statistics', args => this.onStatisticsCommand(args))
+        this.slackBotInstance.command('/coretime', args => this.onCoreTimeCommand(args))
+        this.slackBotInstance.command('/respond-time', args => this.onRespondTimeCommand(args))
+        this.slackBotInstance.command('/statistics', args => this.onStatisticsCommand(args))
 
-        this.#slackBotInstance.message(/.*/, args => this.onMessageEvent(args))
-        this.#slackBotInstance.message(subtype('message_deleted'), args => this.onMessageEvent(args))
+        this.slackBotInstance.message(/.*/, args => this.onMessageEvent(args))
+        this.slackBotInstance.message(subtype('message_deleted'), args => this.onMessageEvent(args))
 
-        this.#slackBotInstance.event('reaction_added', args => this.onEmojiRespond(args))
-        this.#slackBotInstance.event('reaction_removed', args => this.onEmojiRemove(args))
+        this.slackBotInstance.event('reaction_added', args => this.onEmojiRespond(args))
+        this.slackBotInstance.event('reaction_removed', args => this.onEmojiRemove(args))
 
-        this.#slackBotInstance.action('coretime_start_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeStart'}))
-        this.#slackBotInstance.action('coretime_end_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeEnd'}))
+        this.slackBotInstance.action('coretime_start_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeStart'}))
+        this.slackBotInstance.action('coretime_end_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeEnd'}))
 
-        this.#slackBotInstance.view('max_respond_time_view', args => this.onRespondTimeViewSubmit(args))
-        this.#slackBotInstance.view('statistics_view', args => this.onStatisticsViewSubmit(args))
+        this.slackBotInstance.view('max_respond_time_view', args => this.onRespondTimeViewSubmit(args))
+        this.slackBotInstance.view('statistics_view', args => this.onStatisticsViewSubmit(args))
 
-        this.#slackBotInstance
+        this.slackBotInstance
             .start()
             .then(() => this.logger.verbose('✅  SlackModule instance initialized'))
             .catch(error => {
@@ -74,7 +74,7 @@ export class SlackService {
                 this.sendSlackApiError(error).then()
             })
 
-        this.#slackBotInstance.error(async (error: CodedError) => {
+        this.slackBotInstance.error(async (error: CodedError) => {
             this.logger.error(error)
             await this.sendSlackApiError(error)
         })
@@ -93,7 +93,7 @@ export class SlackService {
 
     @Cron(CronExpression.MONDAY_TO_FRIDAY_AT_12PM)
     @Transactional()
-    public async fetchSlackInfo() {
+    private async fetchSlackInfo() {
         await this.fetchTeams()
         await this.fetchChannels()
         await this.fetchUsers()
@@ -376,7 +376,7 @@ export class SlackService {
 
     @SlackErrorHandler()
     @Transactional()
-    async onMessageDelete(ts: string) {
+    private async onMessageDelete(ts: string) {
         return this.messageService.removeByTimestamp(ts)
     }
 
@@ -464,7 +464,7 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     public async fetchTeams() {
-        const response = await this.#slackBotInstance.client.team.info()
+        const response = await this.slackBotInstance.client.team.info()
         if (!response.ok || !response.team || !response.team.id) throw new SlackException('slack api error')
 
         const check = await this.teamService.findOneBySlackId(response.team.id)
@@ -483,7 +483,7 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     public async fetchChannels() {
-        const response = await this.#slackBotInstance.client.conversations.list()
+        const response = await this.slackBotInstance.client.conversations.list()
         if (!response.ok || !response.channels) throw new SlackException('slack api error')
 
         const toCreate: Channel[] = []
@@ -519,7 +519,7 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     public async fetchUsers() {
-        const response = await this.#slackBotInstance.client.users.list()
+        const response = await this.slackBotInstance.client.users.list()
         if (!response.ok || !response.members) throw new SlackException('slack api error')
 
         const toCreate: User[] = []

@@ -16,7 +16,7 @@ export class RespondService {
         @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
     ) {}
 
-    makeRespond(createRespondDto: CreateRespondDto) {
+    public makeRespond(createRespondDto: CreateRespondDto) {
         const respond = new Respond()
         respond.setUser(createRespondDto.userId)
         respond.setTeam(createRespondDto.teamId)
@@ -28,7 +28,7 @@ export class RespondService {
     }
 
     @Transactional()
-    async create(createRespondDto: CreateRespondDto): Promise<Respond> {
+    public async create(createRespondDto: CreateRespondDto): Promise<Respond> {
         const team = await this.teamService.findOne(createRespondDto.teamId)
         if (!team) throw new NotFoundException('team not found')
 
@@ -36,25 +36,25 @@ export class RespondService {
     }
 
     @Transactional()
-    async createMany(responds: Respond[]) {
+    public async createMany(responds: Respond[]) {
         return this.respondRepository.insert(responds)
     }
 
-    findAll() {
+    public async findAll() {
         return `This action returns all respond`
     }
 
-    findOne(id: number) {
+    public async findOne(id: number) {
         return `This action returns a #${id} respond`
     }
 
     @Transactional()
-    findByMessageIdAndUserId(messageId: number, userId: number) {
+    public async findByMessageIdAndUserId(messageId: number, userId: number) {
         return this.respondRepository.findOneBy({message: {id: messageId}, user: {id: userId}})
     }
 
     @Transactional()
-    async update(updateRespondDto: UpdateRespondDto) {
+    public async update(updateRespondDto: UpdateRespondDto) {
         return this.respondRepository
             .createQueryBuilder()
             .update(Respond)
@@ -68,7 +68,7 @@ export class RespondService {
     }
 
     @Transactional()
-    getStatistics(teamId: string, year: number, month: number) {
+    public async getStatistics(teamId: string, year: number, month: number) {
         return this.respondRepository.query(
             `
             SELECT *
@@ -80,18 +80,18 @@ export class RespondService {
             ) as avgTable 
             JOIN user on avgTable.userId = user.id
             ORDER BY average, userId
-#             LIMIT 3;
+            LIMIT 3;
         `,
             [teamId, `${year}-${month}`],
         )
     }
 
-    remove(id: number) {
+    public async remove(id: number) {
         return `This action removes a #${id} respond`
     }
 
     @Transactional()
-    removeBySlackUserAndTimestamp(slackUserId: string, timestamp: string) {
+    public async removeBySlackUserAndTimestamp(slackUserId: string, timestamp: string) {
         console.log(slackUserId, timestamp)
         return this.respondRepository
             .createQueryBuilder('respond')

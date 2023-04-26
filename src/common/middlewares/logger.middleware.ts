@@ -7,7 +7,7 @@ import {Logger} from 'winston'
 export class LoggerMiddleware implements NestMiddleware {
     constructor(@Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger) {}
 
-    use(request: Request, response: Response, next: NextFunction): void {
+    public use(request: Request, response: Response, next: NextFunction): void {
         const {ip, method, originalUrl} = request
         const userAgent = request.get('user-agent') || ''
         //request log

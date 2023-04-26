@@ -9,7 +9,7 @@ import {DiscordService} from '../../discord/discord.service'
 export class ErrorInterceptor implements NestInterceptor {
     constructor(private discordService: DiscordService, @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger) {}
 
-    intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         return next.handle().pipe(
             catchError(err => {
                 if (err instanceof BadRequestException) return throwError(() => err)

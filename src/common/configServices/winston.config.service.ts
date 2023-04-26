@@ -8,7 +8,7 @@ import {AppConfigService} from 'src/config/config.service'
 export class WinstonConfigService implements WinstonModuleOptionsFactory {
     constructor(private configService: AppConfigService) {}
 
-    createWinstonModuleOptions() {
+    public createWinstonModuleOptions() {
         const appConfig = this.configService.getAppConfig()
         const nodeEnv = appConfig.ENV
         const serviceName = appConfig.NAME

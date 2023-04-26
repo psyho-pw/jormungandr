@@ -12,20 +12,11 @@ import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/types'
 import {SlackException} from '../common/exceptions/slack.exception'
-import {
-    SlackActionArgs,
-    SlackCommandArgs,
-    SlackReactionAddEventArgs,
-    SlackMessageArgs,
-    SlackViewSubmitArgs,
-    SlackMessageDeleteEventArgs,
-    SlackReactionRemoveEventArgs,
-} from './slack.type'
+import {SlackActionArgs, SlackCommandArgs, SlackReactionAddEventArgs, SlackMessageArgs, SlackViewSubmitArgs, SlackReactionRemoveEventArgs} from './slack.type'
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
 import {Cron, CronExpression} from '@nestjs/schedule'
 import {Channel} from '../channel/entities/channel.entity'
-import {MessageDeletedEvent, MessageEvent} from '@slack/bolt/dist/types/events/message-events'
 
 @Injectable()
 export class SlackService {

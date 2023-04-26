@@ -36,7 +36,7 @@ export class Message extends AbstractEntity {
     @ManyToOne(() => Team)
     team: Team
 
-    @OneToMany(() => Respond, respond => respond.message, {cascade: true})
+    @OneToMany(() => Respond, respond => respond.message, {cascade: ['soft-remove']})
     responds: Respond[]
 
     public setUser(userId: number) {

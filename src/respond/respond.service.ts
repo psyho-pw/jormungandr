@@ -75,12 +75,12 @@ export class RespondService {
             FROM (
                 SELECT r.*, AVG(r.timeTaken) as average
                 FROM respond r JOIN team t on r.teamId = t.id
-                WHERE t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
+                WHERE r.deletedAt IS NULL AND t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
                 GROUP BY r.userId
             ) as avgTable 
             JOIN user on avgTable.userId = user.id
             ORDER BY average, userId
-            LIMIT 3;
+#             LIMIT 3;
         `,
             [teamId, `${year}-${month}`],
         )

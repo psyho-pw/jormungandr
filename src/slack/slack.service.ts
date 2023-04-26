@@ -433,6 +433,7 @@ export class SlackService {
         if (!channel || !year || !month) throw new SlackException('invalid input value(s)')
 
         const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
+        console.log(statistics)
 
         const blocks = statistics.map((user: any, idx: number) => {
             return {

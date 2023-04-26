@@ -36,8 +36,9 @@ export class MessageService {
     }
 
     @Transactional()
-    findOneByTimestamp(timestamp: string) {
-        return this.messageRepository.findOne({where: {timestamp}})
+    findOneByTimestampOrFail(timestamp: string) {
+        // const result = this.messageRepository.findOne({where: {timestamp}})
+        return this.messageRepository.findOneOrFail({where: {timestamp}, relations: {responds: true}})
     }
 
     @Transactional()
@@ -57,6 +58,11 @@ export class MessageService {
 
     @Transactional()
     removeByTimestamp(timestamp: string) {
-        return this.messageRepository.softDelete({timestamp})
+        return this.findOneByTimestampOrFail(timestamp).then(message => {
+            console.log(message)
+            return this.messageRepository.softRemove(message)
+        })
+        // return this.messageRepository.softRemove({timestamp})
+        // return this.messageRepository.softDelete({timestamp})
     }
 }

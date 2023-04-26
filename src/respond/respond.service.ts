@@ -96,7 +96,9 @@ export class RespondService {
         return this.respondRepository
             .createQueryBuilder('respond')
             .leftJoinAndSelect('respond.user', 'user')
-            .softDelete()
+            .leftJoinAndSelect('respond.team', 'team')
+            .update()
+            .set({timeTaken: () => 'team.maxRespondTime'})
             .where('user.slackId = :slackUserId AND timestamp = :timestamp', {slackUserId, timestamp})
             .execute()
     }

@@ -13,7 +13,6 @@ export class MessageService {
     @Transactional()
     async create(createMessageDto: CreateMessageDto): Promise<Message> {
         const message = new Message()
-
         message.messageId = createMessageDto.messageId
         message.type = createMessageDto.type
         message.textContent = createMessageDto.textContent
@@ -22,6 +21,7 @@ export class MessageService {
         message.setTeam(createMessageDto.teamId)
         message.setChannel(createMessageDto.channelId)
         message.setUser(createMessageDto.userId)
+
         return this.messageRepository.save(message)
     }
 
@@ -36,6 +36,11 @@ export class MessageService {
     }
 
     @Transactional()
+    findOneByTimestamp(timestamp: string) {
+        return this.messageRepository.findOne({where: {timestamp}})
+    }
+
+    @Transactional()
     findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
         return this.messageRepository.findOne({where: {timestamp, channel: {channelId: channelId}}, relations: {user: true, team: true, channel: true}})
     }
@@ -47,6 +52,11 @@ export class MessageService {
 
     @Transactional()
     remove(id: number) {
-        return `This action removes a #${id} message`
+        return this.messageRepository.softDelete(id)
+    }
+
+    @Transactional()
+    removeByTimestamp(timestamp: string) {
+        return this.messageRepository.softDelete({timestamp})
     }
 }

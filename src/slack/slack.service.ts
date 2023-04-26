@@ -279,6 +279,7 @@ export class SlackService {
         }
         if (message.subtype) {
             this.logger.debug('message subtype', {subtype: message.subtype})
+            if (message.subtype === 'message_deleted') await this.onMessageDelete(message.previous_message.ts)
             return
         }
 
@@ -375,10 +376,8 @@ export class SlackService {
 
     @SlackErrorHandler()
     @Transactional()
-    async onMessageDelete({payload, event, context}: SlackMessageDeleteEventArgs) {
-        this.logger.debug('event', event)
-        this.logger.debug('context', context)
-        // const msg = await this.messageService.findBySlackId(message.)
+    async onMessageDelete(ts: string) {
+        return this.messageService.removeByTimestamp(ts)
     }
 
     @SlackErrorHandler()

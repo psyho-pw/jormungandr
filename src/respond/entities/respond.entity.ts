@@ -21,7 +21,7 @@ export class Respond extends AbstractEntity {
     user: User
 
     @Index()
-    @ManyToOne(() => Message)
+    @ManyToOne(() => Message, message => message.responds, {onDelete: 'CASCADE'})
     message: Message
 
     @Index()

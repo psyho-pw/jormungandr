@@ -1,6 +1,7 @@
 import {AbstractEntity} from 'src/common/abstract.entity'
 import {Team} from 'src/team/entities/team.entity'
-import {Column, Entity, Index, ManyToOne, JoinColumn} from 'typeorm'
+import {Column, Entity, Index, ManyToOne, JoinColumn, OneToMany} from 'typeorm'
+import {Respond} from '../../respond/entities/respond.entity'
 
 @Entity()
 export class User extends AbstractEntity {
@@ -30,6 +31,9 @@ export class User extends AbstractEntity {
 
     @Column({type: String, nullable: true})
     profileImage: string | null
+
+    @OneToMany(() => Respond, respond => respond.user, {cascade: ['soft-remove']})
+    responds: Respond[]
 
     public setTeam(id: number) {
         const team = new Team()

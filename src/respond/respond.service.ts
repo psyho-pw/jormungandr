@@ -89,4 +89,15 @@ export class RespondService {
     remove(id: number) {
         return `This action removes a #${id} respond`
     }
+
+    @Transactional()
+    removeBySlackUserAndTimestamp(slackUserId: string, timestamp: string) {
+        console.log(slackUserId, timestamp)
+        return this.respondRepository
+            .createQueryBuilder('respond')
+            .leftJoinAndSelect('respond.user', 'user')
+            .softDelete()
+            .where('user.slackId = :slackUserId AND timestamp = :timestamp', {slackUserId, timestamp})
+            .execute()
+    }
 }

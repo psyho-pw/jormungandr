@@ -17,7 +17,7 @@ export class Respond extends AbstractEntity {
     channel: Channel
 
     @Index()
-    @ManyToOne(() => User)
+    @ManyToOne(() => User, user => user.responds)
     user: User
 
     @Index()

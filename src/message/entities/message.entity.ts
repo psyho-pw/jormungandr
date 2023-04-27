@@ -2,7 +2,8 @@ import {Channel} from 'src/channel/entities/channel.entity'
 import {AbstractEntity} from 'src/common/abstract.entity'
 import {Team} from 'src/team/entities/team.entity'
 import {User} from 'src/user/entities/user.entity'
-import {Column, Entity, Index, ManyToOne} from 'typeorm'
+import {Column, Entity, Index, ManyToOne, OneToMany} from 'typeorm'
+import {Respond} from '../../respond/entities/respond.entity'
 
 @Entity()
 export class Message extends AbstractEntity {
@@ -34,6 +35,9 @@ export class Message extends AbstractEntity {
     @Index()
     @ManyToOne(() => Team)
     team: Team
+
+    @OneToMany(() => Respond, respond => respond.message, {cascade: ['soft-remove']})
+    responds: Respond[]
 
     public setUser(userId: number) {
         const user = new User()

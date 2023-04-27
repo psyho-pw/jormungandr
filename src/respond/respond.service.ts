@@ -1,4 +1,4 @@
-import {Injectable, NotFoundException} from '@nestjs/common'
+import {Inject, Injectable, NotFoundException} from '@nestjs/common'
 import {CreateRespondDto} from './dto/create-respond.dto'
 import {UpdateRespondDto} from './dto/update-respond.dto'
 import {InjectRepository} from '@nestjs/typeorm'
@@ -7,6 +7,8 @@ import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
 import {AppConfigService} from '../config/config.service'
 import {TeamService} from '../team/team.service'
+import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
+import {Logger} from 'winston'
 
 @Injectable()
 export class RespondService {
@@ -14,9 +16,10 @@ export class RespondService {
         private readonly configService: AppConfigService,
         private readonly teamService: TeamService,
         @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
-    makeRespond(createRespondDto: CreateRespondDto) {
+    public makeRespond(createRespondDto: CreateRespondDto) {
         const respond = new Respond()
         respond.setUser(createRespondDto.userId)
         respond.setTeam(createRespondDto.teamId)
@@ -28,7 +31,7 @@ export class RespondService {
     }
 
     @Transactional()
-    async create(createRespondDto: CreateRespondDto): Promise<Respond> {
+    public async create(createRespondDto: CreateRespondDto): Promise<Respond> {
         const team = await this.teamService.findOne(createRespondDto.teamId)
         if (!team) throw new NotFoundException('team not found')
 
@@ -36,25 +39,25 @@ export class RespondService {
     }
 
     @Transactional()
-    async createMany(responds: Respond[]) {
+    public async createMany(responds: Respond[]) {
         return this.respondRepository.insert(responds)
     }
 
-    findAll() {
+    public async findAll() {
         return `This action returns all respond`
     }
 
-    findOne(id: number) {
+    public async findOne(id: number) {
         return `This action returns a #${id} respond`
     }
 
     @Transactional()
-    findByMessageIdAndUserId(messageId: number, userId: number) {
+    public async findByMessageIdAndUserId(messageId: number, userId: number) {
         return this.respondRepository.findOneBy({message: {id: messageId}, user: {id: userId}})
     }
 
     @Transactional()
-    async update(updateRespondDto: UpdateRespondDto) {
+    public async update(updateRespondDto: UpdateRespondDto) {
         return this.respondRepository
             .createQueryBuilder()
             .update(Respond)
@@ -68,14 +71,14 @@ export class RespondService {
     }
 
     @Transactional()
-    getStatistics(teamId: string, year: number, month: number) {
+    public async getStatistics(teamId: string, year: number, month: number) {
         return this.respondRepository.query(
             `
             SELECT *
             FROM (
                 SELECT r.*, AVG(r.timeTaken) as average
                 FROM respond r JOIN team t on r.teamId = t.id
-                WHERE t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
+                WHERE r.deletedAt IS NULL AND t.teamId = ? AND DATE_FORMAT(STR_TO_DATE(?, '%Y-%m'), '%Y-%m') = DATE_FORMAT(r.createdAt, '%Y-%m')
                 GROUP BY r.userId
             ) as avgTable 
             JOIN user on avgTable.userId = user.id
@@ -86,7 +89,17 @@ export class RespondService {
         )
     }
 
-    remove(id: number) {
+    public async remove(id: number) {
         return `This action removes a #${id} respond`
+    }
+
+    @Transactional()
+    public async resetTimeTaken(slackUserId: string, timestamp: string) {
+        const targetRespond = await this.respondRepository.findOne({where: {user: {slackId: slackUserId}, message: {timestamp}}, relations: {team: true}})
+        if (!targetRespond) {
+            this.logger.error(`${this.resetTimeTaken.name} - targetRespond not found. this may have been caused by an emoji being removed from a thread message.`)
+            return
+        }
+        return this.respondRepository.update(targetRespond.id, {timeTaken: targetRespond.team.maxRespondTime})
     }
 }

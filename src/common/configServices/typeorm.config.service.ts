@@ -6,7 +6,7 @@ import {AppConfigService} from 'src/config/config.service'
 export class TypeormConfigService implements TypeOrmOptionsFactory {
     constructor(private readonly configService: AppConfigService) {}
 
-    createTypeOrmOptions(): TypeOrmModuleOptions | Promise<TypeOrmModuleOptions> {
+    public createTypeOrmOptions(): TypeOrmModuleOptions | Promise<TypeOrmModuleOptions> {
         return {
             ...this.configService.getDBConfig(),
             entities: [__dirname + '/../../**/*.entity{.ts,.js}'],

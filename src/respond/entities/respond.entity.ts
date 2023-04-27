@@ -17,11 +17,11 @@ export class Respond extends AbstractEntity {
     channel: Channel
 
     @Index()
-    @ManyToOne(() => User)
+    @ManyToOne(() => User, user => user.responds)
     user: User
 
     @Index()
-    @ManyToOne(() => Message)
+    @ManyToOne(() => Message, message => message.responds, {onDelete: 'CASCADE'})
     message: Message
 
     @Index()

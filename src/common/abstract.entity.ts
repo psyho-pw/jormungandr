@@ -12,8 +12,8 @@ export abstract class AbstractEntity {
     @UpdateDateColumn()
     updatedAt: Date
 
-    @DeleteDateColumn()
-    deletedAt: Date
+    @DeleteDateColumn({nullable: true, select: true})
+    deletedAt: Date | null
 }
 
 export abstract class AbstractActorEntity extends AbstractEntity {

@@ -10,7 +10,7 @@ import {Transactional} from 'typeorm-transactional'
 export class ChannelService {
     constructor(@InjectRepository(Channel) private readonly channelRepository: Repository<Channel>) {}
 
-    makeChannel(createChannelDto: CreateChannelDto) {
+    public makeChannel(createChannelDto: CreateChannelDto) {
         const channel = new Channel()
         channel.channelId = createChannelDto.channelId
         channel.name = createChannelDto.name
@@ -20,42 +20,42 @@ export class ChannelService {
     }
 
     @Transactional()
-    async create(createChannelDto: CreateChannelDto) {
+    public async create(createChannelDto: CreateChannelDto) {
         return this.channelRepository.save(this.makeChannel(createChannelDto))
     }
 
     @Transactional()
-    async createMany(channels: Channel[]) {
+    public async createMany(channels: Channel[]) {
         return this.channelRepository.insert(channels)
     }
 
     @Transactional()
-    findOneBySlackId(id: string) {
+    public async findOneBySlackId(id: string) {
         return this.channelRepository.findOne({where: {channelId: id}, relations: {team: true}})
     }
 
     @Transactional()
-    findByTeamSlackId(teamId: string) {
+    public async findByTeamSlackId(teamId: string) {
         return this.channelRepository.find({where: {team: {teamId}}, order: {id: 'ASC'}})
     }
 
     @Transactional()
-    findAll() {
+    public async findAll() {
         return `This action returns all channel`
     }
 
     @Transactional()
-    findOne(id: number) {
+    public async findOne(id: number) {
         return `This action returns a #${id} channel`
     }
 
     @Transactional()
-    update(id: number, updateChannelDto: UpdateChannelDto) {
+    public async update(id: number, updateChannelDto: UpdateChannelDto) {
         return `This action updates a #${id} channel`
     }
 
     @Transactional()
-    remove(id: number) {
+    public async remove(id: number) {
         return `This action removes a #${id} channel`
     }
 }

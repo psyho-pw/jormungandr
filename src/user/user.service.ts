@@ -11,7 +11,7 @@ import {Transactional} from 'typeorm-transactional'
 export class UserService {
     constructor(@InjectRepository(User) private userRepository: Repository<User>, private readonly messageService: MessageService) {}
 
-    makeUser(createUserDto: CreateUserDto) {
+    public makeUser(createUserDto: CreateUserDto) {
         const user = new User()
         user.slackId = createUserDto.slackId
         user.setTeam(createUserDto.teamId)
@@ -25,42 +25,42 @@ export class UserService {
     }
 
     @Transactional()
-    async create(createUserDto: CreateUserDto) {
+    public async create(createUserDto: CreateUserDto) {
         return this.userRepository.save(this.makeUser(createUserDto))
     }
 
     @Transactional()
-    async createMany(users: User[]) {
+    public async createMany(users: User[]) {
         return this.userRepository.insert(users)
     }
 
     @Transactional()
-    findAll(): Promise<User[]> {
+    public async findAll(): Promise<User[]> {
         return this.userRepository.find({order: {id: 'DESC'}})
     }
 
     @Transactional()
-    async findBySlackId(id: string): Promise<User | null> {
+    public async findBySlackId(id: string): Promise<User | null> {
         return this.userRepository.findOne({where: {slackId: id}, relations: {team: true}})
     }
 
     @Transactional()
-    async findBySlackIds(ids: string[]): Promise<User[]> {
+    public async findBySlackIds(ids: string[]): Promise<User[]> {
         return this.userRepository.createQueryBuilder('user').where('slackId IN (:id)', {id: ids}).leftJoinAndSelect('user.team', 'team').getMany()
     }
 
     @Transactional()
-    findOne(id: number): Promise<User | null> {
+    public async findOne(id: number): Promise<User | null> {
         return this.userRepository.findOneBy({id})
     }
 
     @Transactional()
-    update(id: number, updateUserDto: UpdateUserDto) {
+    public async update(id: number, updateUserDto: UpdateUserDto) {
         return this.userRepository.update(id, updateUserDto)
     }
 
     @Transactional()
-    remove(id: number) {
+    public async remove(id: number) {
         return `This action removes a #${id} user`
     }
 }

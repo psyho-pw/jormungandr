@@ -11,31 +11,31 @@ export class AppConfigService {
         return this.configService.get(propertyPath)
     }
 
-    getAppConfig(): AppConfig {
+    public getAppConfig(): AppConfig {
         return this.configService.getOrThrow('APP')
     }
 
-    getAuthConfig(): AuthConfig {
+    public getAuthConfig(): AuthConfig {
         return this.configService.getOrThrow('AUTH')
     }
 
-    getDBConfig(): DBConfig {
+    public getDBConfig(): DBConfig {
         return this.configService.getOrThrow('DB')
     }
 
-    getSlackConfig(): SlackConfig {
+    public getSlackConfig(): SlackConfig {
         return this.configService.getOrThrow('SLACK')
     }
 
-    getDiscordConfig(): DiscordConfig {
+    public getDiscordConfig(): DiscordConfig {
         return this.configService.getOrThrow('DISCORD')
     }
 
-    getServerConfig(): ServerConfig {
+    public getServerConfig(): ServerConfig {
         return this.configService.getOrThrow('SERVER')
     }
 
-    getAwsConfig(): AwsConfig {
+    public getAwsConfig(): AwsConfig {
         return this.configService.getOrThrow('AWS')
     }
 }

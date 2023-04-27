@@ -4,7 +4,7 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, CodedError, GenericMessageEvent, StaticSelectAction, subtype} from '@slack/bolt'
+import {App, CodedError, GenericMessageEvent, MessageDeletedEvent, StaticSelectAction, subtype} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
@@ -270,7 +270,8 @@ export class SlackService {
         }
         if (message.subtype) {
             this.logger.debug('message subtype', {subtype: message.subtype})
-            if (message.subtype === 'message_deleted') await this.onMessageDelete(message.previous_message.ts)
+            console.log(message)
+            if (message.subtype === 'message_deleted') await this.onMessageDelete(message)
             return
         }
 
@@ -367,8 +368,12 @@ export class SlackService {
 
     @SlackErrorHandler()
     @Transactional()
-    private async onMessageDelete(ts: string) {
-        return this.messageService.removeByTimestamp(ts)
+    private async onMessageDelete(message: MessageDeletedEvent) {
+        if ('thread_ts' in message.previous_message) {
+            this.logger.verbose('delete action in thread. skipping...')
+            return
+        }
+        return this.messageService.removeByTimestamp(message.previous_message.ts)
     }
 
     @SlackErrorHandler()
@@ -378,7 +383,6 @@ export class SlackService {
             this.logger.warn('Current time is not core-time')
             return
         }
-        console.log(event)
         if (event.item.type !== 'message') return
 
         const targetMessage = await this.messageService.findByChannelIdAndTimestamp(event.item.channel, event.item.ts)

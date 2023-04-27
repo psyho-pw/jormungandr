@@ -1,4 +1,4 @@
-import {Injectable, NotFoundException} from '@nestjs/common'
+import {Inject, Injectable, NotFoundException} from '@nestjs/common'
 import {CreateRespondDto} from './dto/create-respond.dto'
 import {UpdateRespondDto} from './dto/update-respond.dto'
 import {InjectRepository} from '@nestjs/typeorm'
@@ -7,8 +7,8 @@ import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
 import {AppConfigService} from '../config/config.service'
 import {TeamService} from '../team/team.service'
-import {User} from '../user/entities/user.entity'
-import {Team} from '../team/entities/team.entity'
+import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
+import {Logger} from 'winston'
 
 @Injectable()
 export class RespondService {
@@ -16,6 +16,7 @@ export class RespondService {
         private readonly configService: AppConfigService,
         private readonly teamService: TeamService,
         @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
 
     public makeRespond(createRespondDto: CreateRespondDto) {
@@ -94,7 +95,11 @@ export class RespondService {
 
     @Transactional()
     public async resetTimeTaken(slackUserId: string, timestamp: string) {
-        const targetRespond = await this.respondRepository.findOneOrFail({where: {user: {slackId: slackUserId}, message: {timestamp}}, relations: {team: true}})
+        const targetRespond = await this.respondRepository.findOne({where: {user: {slackId: slackUserId}, message: {timestamp}}, relations: {team: true}})
+        if (!targetRespond) {
+            this.logger.error(`${this.resetTimeTaken.name} - targetRespond not found. this may have been caused by an emoji being removed from a thread message.`)
+            return
+        }
         return this.respondRepository.update(targetRespond.id, {timeTaken: targetRespond.team.maxRespondTime})
     }
 }

@@ -403,6 +403,7 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onEmojiRemove({event}: SlackReactionRemoveEventArgs) {
+        console.log(event)
         if (event.item.type !== 'message') {
             this.logger.verbose('removed event target is not a message. skipping...')
             return

@@ -8,6 +8,5 @@ export type SlackActionArgs = SlackActionMiddlewareArgs & AllMiddlewareArgs & {c
 
 export type SlackReactionAddEventArgs = SlackEventMiddlewareArgs<'reaction_added'> & AllMiddlewareArgs
 export type SlackReactionRemoveEventArgs = SlackEventMiddlewareArgs<'reaction_removed'> & AllMiddlewareArgs
-export type SlackMessageDeleteEventArgs = SlackEventMiddlewareArgs<'message_deleted'> & AllMiddlewareArgs
 
 export type SlackViewSubmitArgs = SlackViewMiddlewareArgs & AllMiddlewareArgs

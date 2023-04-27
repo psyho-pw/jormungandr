@@ -7,6 +7,8 @@ import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
 import {AppConfigService} from '../config/config.service'
 import {TeamService} from '../team/team.service'
+import {User} from '../user/entities/user.entity'
+import {Team} from '../team/entities/team.entity'
 
 @Injectable()
 export class RespondService {
@@ -91,15 +93,8 @@ export class RespondService {
     }
 
     @Transactional()
-    public async removeBySlackUserAndTimestamp(slackUserId: string, timestamp: string) {
-        console.log(slackUserId, timestamp)
-        return this.respondRepository
-            .createQueryBuilder('respond')
-            .leftJoinAndSelect('respond.user', 'user')
-            .leftJoinAndSelect('respond.team', 'team')
-            .update()
-            .set({timeTaken: () => 'team.maxRespondTime'})
-            .where('user.slackId = :slackUserId AND timestamp = :timestamp', {slackUserId, timestamp})
-            .execute()
+    public async resetTimeTaken(slackUserId: string, timestamp: string) {
+        const targetRespond = await this.respondRepository.findOneOrFail({where: {user: {slackId: slackUserId}, message: {timestamp}}, relations: {team: true}})
+        return this.respondRepository.update(targetRespond.id, {timeTaken: targetRespond.team.maxRespondTime})
     }
 }

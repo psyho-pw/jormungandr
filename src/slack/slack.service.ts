@@ -378,10 +378,14 @@ export class SlackService {
             this.logger.warn('Current time is not core-time')
             return
         }
+        console.log(event)
         if (event.item.type !== 'message') return
 
         const targetMessage = await this.messageService.findByChannelIdAndTimestamp(event.item.channel, event.item.ts)
-        if (!targetMessage) throw new SlackException('target message not found')
+        if (!targetMessage) {
+            this.logger.error('target message not found', event.item)
+            return
+        }
 
         if (targetMessage.user.slackId === event.user) {
             this.logger.verbose('emoji response to self, skipping ...')
@@ -395,12 +399,25 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onEmojiRemove({event}: SlackReactionRemoveEventArgs) {
-        this.logger.debug('event', event)
         if (event.item.type !== 'message') {
             this.logger.verbose('removed event target is not a message. skipping...')
             return
         }
-        await this.respondService.removeBySlackUserAndTimestamp(event.user, event.item.ts)
+
+        const reactionsGetResponse = await this.slackBotInstance.client.reactions.get({channel: event.item.channel, timestamp: event.item.ts, full: true})
+        if (!reactionsGetResponse.message) throw new SlackException('message not found in ReactionGetResponse')
+
+        const reactions = reactionsGetResponse.message.reactions
+        if (!reactions) {
+            await this.respondService.resetTimeTaken(event.user, event.item.ts)
+            return
+        }
+
+        for (const reaction of reactions) {
+            const usersSet = new Set(reaction.users)
+            if (usersSet.has(event.user)) return
+        }
+        await this.respondService.resetTimeTaken(event.user, event.item.ts)
     }
 
     @SlackErrorHandler()
@@ -429,7 +446,6 @@ export class SlackService {
         if (!channel || !year || !month) throw new SlackException('invalid input value(s)')
 
         const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
-        console.log(statistics)
 
         const blocks = statistics.map((user: any, idx: number) => {
             return {

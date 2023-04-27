@@ -52,7 +52,6 @@ export class DiscordService {
 
     public async sendErrorReport(err: any) {
         if (err instanceof GeneralException) {
-            console.log(err.getCalledFrom())
             await this.sendMessage(err.message, err.getCalledFrom(), [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
             return
         }

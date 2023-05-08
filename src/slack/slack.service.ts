@@ -264,13 +264,8 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onMessageEvent({message, client, context}: SlackMessageArgs) {
-        if ('thread_ts' in message && message.thread_ts) {
-            this.logger.verbose('thread message. skipping...')
-            return
-        }
         if (message.subtype) {
             this.logger.debug('message subtype', {subtype: message.subtype})
-            console.log(message)
             if (message.subtype === 'message_deleted') await this.onMessageDelete(message)
             return
         }
@@ -403,7 +398,6 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onEmojiRemove({event}: SlackReactionRemoveEventArgs) {
-        console.log(event)
         if (event.item.type !== 'message') {
             this.logger.verbose('removed event target is not a message. skipping...')
             return

@@ -10,6 +10,9 @@ export class UpdateRespondDto {
     @IsString()
     timestamp: string
 
-    @IsNumber()
-    timeTaken: number
+    // @IsNumber()
+    // timeTaken: number
+
+    @IsString()
+    slackTeamId: string
 }

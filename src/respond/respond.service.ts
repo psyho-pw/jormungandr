@@ -9,6 +9,7 @@ import {AppConfigService} from '../config/config.service'
 import {TeamService} from '../team/team.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
+import {Message} from '../message/entities/message.entity'
 
 @Injectable()
 export class RespondService {
@@ -58,15 +59,30 @@ export class RespondService {
 
     @Transactional()
     public async update(updateRespondDto: UpdateRespondDto) {
+        const team = await this.teamService.findOneBySlackId(updateRespondDto.slackTeamId)
+        if (!team) throw new NotFoundException('team not found')
+
         return this.respondRepository
-            .createQueryBuilder()
+            .createQueryBuilder('respond')
             .update(Respond)
-            .set({timestamp: updateRespondDto.timestamp, timeTaken: updateRespondDto.timeTaken})
-            .where('user.id = :userId AND message.id <= :messageId AND timeTaken > :timeTaken', {
-                userId: updateRespondDto.userId,
-                messageId: updateRespondDto.messageId,
-                timeTaken: updateRespondDto.timeTaken,
+            .set({
+                timestamp: updateRespondDto.timestamp,
+                // timeTaken: updateRespondDto.timeTaken,
+                timeTaken: () => `(SELECT timestamp FROM \`message\` WHERE id = message.id LIMIT 1) - ${+updateRespondDto.timestamp}`,
             })
+            .where(
+                `
+                    user.id = :userId
+                    AND message.id <= :messageId
+                    AND timeTaken = :maxRespondTime
+                    AND createdAt >= DATE_SUB(NOW(), INTERVAL :maxRespondTime SECOND)
+                `,
+                {
+                    userId: updateRespondDto.userId,
+                    messageId: updateRespondDto.messageId,
+                    maxRespondTime: team.maxRespondTime,
+                },
+            )
             .execute()
     }
 

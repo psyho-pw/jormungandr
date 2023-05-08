@@ -315,8 +315,14 @@ export class SlackService {
             return
         }
 
-        const timeTaken = +message.ts - +parentMessage.timestamp
-        return this.respondService.update({messageId: parentMessage.id, userId: parentMessage.user.id, timestamp: message.ts, timeTaken})
+        // const timeTaken = +message.ts - +parentMessage.timestamp
+        return this.respondService.update({
+            messageId: parentMessage.id,
+            userId: parentMessage.user.id,
+            timestamp: message.ts,
+            // timeTaken,
+            slackTeamId: parentMessage.team.teamId,
+        })
     }
 
     @SlackErrorHandler()
@@ -391,8 +397,14 @@ export class SlackService {
             return
         }
 
-        const timeTaken = +event.event_ts - +targetMessage.timestamp
-        await this.respondService.update({messageId: targetMessage.id, userId: targetMessage.user.id, timestamp: event.event_ts, timeTaken})
+        // const timeTaken = +event.event_ts - +targetMessage.timestamp
+        await this.respondService.update({
+            messageId: targetMessage.id,
+            userId: targetMessage.user.id,
+            timestamp: event.event_ts,
+            // timeTaken,
+            slackTeamId: targetMessage.team.teamId,
+        })
     }
 
     @SlackErrorHandler()

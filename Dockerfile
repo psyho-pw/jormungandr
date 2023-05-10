@@ -4,13 +4,13 @@ ENV NODE_ENV=development
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY yarn.lock ./
+COPY pnpm-lock.yaml ./
 
-RUN yarn install
+RUN pnpm install
 
 COPY . .
 
-RUN yarn run build
+RUN pnpm run build
 
 FROM node:20.0.0-alpine as production
 ENV NODE_ENV=production
@@ -20,11 +20,13 @@ RUN apk --no-cache add tzdata && \
 	echo "Asia/Seoul" > /etc/timezone \
 	apk del tzdata
 
+RUN npm i -g pnpm
+
 WORKDIR /usr/src/app
 
 COPY package.json ./
-COPY yarn.lock ./
-RUN yarn install --only-production
+COPY pnpm-lock.yaml ./
+RUN pnpm install --prod
 COPY dist ./dist
 
 CMD ["node", "dist/src/main"]

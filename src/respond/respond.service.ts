@@ -9,7 +9,6 @@ import {AppConfigService} from '../config/config.service'
 import {TeamService} from '../team/team.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
-import {Message} from '../message/entities/message.entity'
 
 @Injectable()
 export class RespondService {

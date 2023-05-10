@@ -10,7 +10,7 @@ import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
 import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
-import {PlainTextOption} from '@slack/types'
+import {PlainTextOption} from '@slack/bolt'
 import {SlackException} from '../common/exceptions/slack.exception'
 import {SlackActionArgs, SlackCommandArgs, SlackReactionAddEventArgs, SlackMessageArgs, SlackViewSubmitArgs, SlackReactionRemoveEventArgs} from './slack.type'
 import {User} from '../user/entities/user.entity'
@@ -531,7 +531,7 @@ export class SlackService {
 
         await this.channelService.createMany(toCreate)
 
-        return response.channels
+        return this.channelService.findAll()
     }
 
     @SlackErrorHandler()
@@ -576,6 +576,6 @@ export class SlackService {
 
         await this.userService.createMany(toCreate)
 
-        return response.members
+        return this.userService.findAll()
     }
 }

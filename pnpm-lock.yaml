@@ -81,6 +81,9 @@ devDependencies:
   '@nestjs/testing':
     specifier: ^9.4.0
     version: 9.4.0(@nestjs/common@9.4.0)(@nestjs/core@9.4.0)(@nestjs/platform-express@9.4.0)
+  '@slack/types':
+    specifier: ^2.8.0
+    version: 2.8.0
   '@types/cron':
     specifier: ^2.0.1
     version: 2.0.1
@@ -108,6 +111,9 @@ devDependencies:
   '@typescript-eslint/parser':
     specifier: ^5.59.5
     version: 5.59.5(eslint@8.40.0)(typescript@5.0.4)
+  discord-api-types:
+    specifier: ^0.37.42
+    version: 0.37.42
   eslint:
     specifier: ^8.40.0
     version: 8.40.0
@@ -1345,7 +1351,6 @@ packages:
   /@slack/types@2.8.0:
     resolution: {integrity: sha512-ghdfZSF0b4NC9ckBA8QnQgC9DJw2ZceDq0BIjjRSv6XAZBXJdWgxIsYz0TYnWSiqsKZGH2ZXbj9jYABZdH3OSQ==}
     engines: {node: '>= 12.13.0', npm: '>= 6.12.0'}
-    dev: false
 
   /@slack/web-api@6.8.1:
     resolution: {integrity: sha512-eMPk2S99S613gcu7odSw/LV+Qxr8A+RXvBD0GYW510wJuTERiTjP5TgCsH8X09+lxSumbDE88wvWbuFuvGa74g==}
@@ -2717,7 +2722,6 @@ packages:
 
   /discord-api-types@0.37.42:
     resolution: {integrity: sha512-1Huaj9cQ1W7/uryS8MZs/tZemnoKB94thM1cE40lep3rpU3q7WHqkdjN/veX0prTkYlPhcyLd/DeF/pBO8X8oQ==}
-    dev: false
 
   /discord.js@14.11.0:
     resolution: {integrity: sha512-CkueWYFQ28U38YPR8HgsBR/QT35oPpMbEsTNM30Fs8loBIhnA4s70AwQEoy6JvLcpWWJO7GY0y2BUzZmuBMepQ==}

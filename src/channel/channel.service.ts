@@ -41,7 +41,7 @@ export class ChannelService {
 
     @Transactional()
     public async findAll() {
-        return `This action returns all channel`
+        return this.channelRepository.find({order: {id: 'DESC'}})
     }
 
     @Transactional()

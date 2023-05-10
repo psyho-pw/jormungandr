@@ -10,7 +10,10 @@ import {QueryDeepPartialEntity} from 'typeorm/query-builder/QueryPartialEntity'
 
 @Injectable()
 export class TeamService {
-    constructor(@InjectRepository(Team) private readonly teamRepository: Repository<Team>, private readonly configService: AppConfigService) {}
+    constructor(
+        @InjectRepository(Team) private readonly teamRepository: Repository<Team>,
+        private readonly configService: AppConfigService,
+    ) {}
 
     @Transactional()
     public async create(createTeamDto: CreateTeamDto) {
@@ -45,11 +48,18 @@ export class TeamService {
     @Transactional()
     public async updateTeamBySlackId(id: string, updateTeamDto: UpdateTeamDto) {
         const updateQuery: QueryDeepPartialEntity<Team> = {}
-        if (updateTeamDto.coreTimeStart !== undefined) updateQuery.coreTimeStart = updateTeamDto.coreTimeStart
-        if (updateTeamDto.coreTimeEnd !== undefined) updateQuery.coreTimeEnd = updateTeamDto.coreTimeEnd
+        if (updateTeamDto.coreTimeStart !== undefined)
+            updateQuery.coreTimeStart = updateTeamDto.coreTimeStart
+        if (updateTeamDto.coreTimeEnd !== undefined)
+            updateQuery.coreTimeEnd = updateTeamDto.coreTimeEnd
         if (updateTeamDto.maxRespondTime) updateQuery.maxRespondTime = updateTeamDto.maxRespondTime
 
-        return this.teamRepository.createQueryBuilder().update(Team).set(updateQuery).where('teamId = :teamId', {teamId: id}).execute()
+        return this.teamRepository
+            .createQueryBuilder()
+            .update(Team)
+            .set(updateQuery)
+            .where('teamId = :teamId', {teamId: id})
+            .execute()
     }
 
     @Transactional()

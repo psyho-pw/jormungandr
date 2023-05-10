@@ -38,12 +38,21 @@ export class MessageService {
     @Transactional()
     public async findOneByTimestampOrFail(timestamp: string) {
         // const result = this.messageRepository.findOne({where: {timestamp}})
-        return this.messageRepository.findOneOrFail({where: {timestamp}, relations: {responds: true}})
+        return this.messageRepository.findOneOrFail({
+            where: {timestamp},
+            relations: {responds: true},
+        })
     }
 
     @Transactional()
-    public async findByChannelIdAndTimestamp(channelId: string, timestamp: string): Promise<Message | null> {
-        return this.messageRepository.findOne({where: {timestamp, channel: {channelId: channelId}}, relations: {user: true, team: true, channel: true}})
+    public async findByChannelIdAndTimestamp(
+        channelId: string,
+        timestamp: string,
+    ): Promise<Message | null> {
+        return this.messageRepository.findOne({
+            where: {timestamp, channel: {channelId: channelId}},
+            relations: {user: true, team: true, channel: true},
+        })
     }
 
     @Transactional()
@@ -58,6 +67,8 @@ export class MessageService {
 
     @Transactional()
     public async removeByTimestamp(timestamp: string) {
-        return this.findOneByTimestampOrFail(timestamp).then(message => this.messageRepository.softRemove(message))
+        return this.findOneByTimestampOrFail(timestamp).then(message =>
+            this.messageRepository.softRemove(message),
+        )
     }
 }

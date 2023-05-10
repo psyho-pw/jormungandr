@@ -8,7 +8,9 @@ import {Transactional} from 'typeorm-transactional'
 
 @Injectable()
 export class ChannelService {
-    constructor(@InjectRepository(Channel) private readonly channelRepository: Repository<Channel>) {}
+    constructor(
+        @InjectRepository(Channel) private readonly channelRepository: Repository<Channel>,
+    ) {}
 
     public makeChannel(createChannelDto: CreateChannelDto) {
         const channel = new Channel()

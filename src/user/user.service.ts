@@ -9,7 +9,10 @@ import {Transactional} from 'typeorm-transactional'
 
 @Injectable()
 export class UserService {
-    constructor(@InjectRepository(User) private userRepository: Repository<User>, private readonly messageService: MessageService) {}
+    constructor(
+        @InjectRepository(User) private userRepository: Repository<User>,
+        private readonly messageService: MessageService,
+    ) {}
 
     public makeUser(createUserDto: CreateUserDto) {
         const user = new User()
@@ -46,7 +49,11 @@ export class UserService {
 
     @Transactional()
     public async findBySlackIds(ids: string[]): Promise<User[]> {
-        return this.userRepository.createQueryBuilder('user').where('slackId IN (:id)', {id: ids}).leftJoinAndSelect('user.team', 'team').getMany()
+        return this.userRepository
+            .createQueryBuilder('user')
+            .where('slackId IN (:id)', {id: ids})
+            .leftJoinAndSelect('user.team', 'team')
+            .getMany()
     }
 
     @Transactional()

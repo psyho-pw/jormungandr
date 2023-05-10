@@ -28,16 +28,22 @@ export class DiscordService {
 
         if (!this.webhookId || !this.webhookToken) {
             const credentials = await this.httpService.axiosRef.get(config.WEBHOOK_URL)
-            if (!credentials.data.id || !credentials.data.token) throw new Error('webhook credential fetch error')
+            if (!credentials.data.id || !credentials.data.token)
+                throw new Error('webhook credential fetch error')
 
             this.webhookId = credentials.data.id
             this.webhookToken = credentials.data.token
         }
     }
 
-    public async sendMessage(message: string, title?: string, additional?: Array<APIEmbedField>): Promise<void> {
+    public async sendMessage(
+        message: string,
+        title?: string,
+        additional?: Array<APIEmbedField>,
+    ): Promise<void> {
         await this.getCredentials()
-        if (!this.webhookClient) this.webhookClient = new WebhookClient({id: this.webhookId, token: this.webhookToken})
+        if (!this.webhookClient)
+            this.webhookClient = new WebhookClient({id: this.webhookId, token: this.webhookToken})
 
         const embed = new EmbedBuilder()
             .setTitle(title ? title : 'Error Report')
@@ -52,9 +58,13 @@ export class DiscordService {
 
     public async sendErrorReport(err: any) {
         if (err instanceof GeneralException) {
-            await this.sendMessage(err.message, err.getCalledFrom(), [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
+            await this.sendMessage(err.message, err.getCalledFrom(), [
+                {name: 'stack', value: (err.stack || '').substring(0, 1024)},
+            ])
             return
         }
-        await this.sendMessage(err.message, 'Unhandled Error', [{name: 'stack', value: (err.stack || '').substring(0, 1024)}])
+        await this.sendMessage(err.message, 'Unhandled Error', [
+            {name: 'stack', value: (err.stack || '').substring(0, 1024)},
+        ])
     }
 }

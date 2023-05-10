@@ -67,7 +67,8 @@ export class RespondService {
             .set({
                 timestamp: updateRespondDto.timestamp,
                 // timeTaken: updateRespondDto.timeTaken,
-                timeTaken: () => `(SELECT timestamp FROM \`message\` WHERE id = message.id LIMIT 1) - ${+updateRespondDto.timestamp}`,
+                timeTaken: () =>
+                    `(SELECT timestamp FROM \`message\` WHERE id = message.id LIMIT 1) - ${+updateRespondDto.timestamp}`,
             })
             .where(
                 `
@@ -110,11 +111,18 @@ export class RespondService {
 
     @Transactional()
     public async resetTimeTaken(slackUserId: string, timestamp: string) {
-        const targetRespond = await this.respondRepository.findOne({where: {user: {slackId: slackUserId}, message: {timestamp}}, relations: {team: true}})
+        const targetRespond = await this.respondRepository.findOne({
+            where: {user: {slackId: slackUserId}, message: {timestamp}},
+            relations: {team: true},
+        })
         if (!targetRespond) {
-            this.logger.error(`${this.resetTimeTaken.name} - targetRespond not found. this may have been caused by an emoji being removed from a thread message.`)
+            this.logger.error(
+                `${this.resetTimeTaken.name} - targetRespond not found. this may have been caused by an emoji being removed from a thread message.`,
+            )
             return
         }
-        return this.respondRepository.update(targetRespond.id, {timeTaken: targetRespond.team.maxRespondTime})
+        return this.respondRepository.update(targetRespond.id, {
+            timeTaken: targetRespond.team.maxRespondTime,
+        })
     }
 }

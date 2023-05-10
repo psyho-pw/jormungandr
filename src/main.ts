@@ -20,10 +20,14 @@ async function bootstrap() {
     app.setGlobalPrefix('api')
     app.enableVersioning({type: VersioningType.URI})
     app.enableCors(serverConfig.CORS)
-    app.useGlobalPipes(new ValidationPipe({transform: true, transformOptions: {enableImplicitConversion: true}}))
+    app.useGlobalPipes(
+        new ValidationPipe({transform: true, transformOptions: {enableImplicitConversion: true}}),
+    )
     app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)))
     app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER))
     await app.listen(appConfig.PORT)
 }
 
-bootstrap().then(() => Logger.verbose(`[${process.env.NODE_ENV}] Listening on port ${process.env.PORT}`))
+bootstrap().then(() =>
+    Logger.verbose(`[${process.env.NODE_ENV}] Listening on port ${process.env.PORT}`),
+)

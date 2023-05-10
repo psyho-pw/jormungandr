@@ -4,7 +4,14 @@ import {MessageService} from '../message/message.service'
 import {DiscordService} from '../discord/discord.service'
 import {AppConfigService} from 'src/config/config.service'
 import {Inject, Injectable} from '@nestjs/common'
-import {App, CodedError, GenericMessageEvent, MessageDeletedEvent, StaticSelectAction, subtype} from '@slack/bolt'
+import {
+    App,
+    CodedError,
+    GenericMessageEvent,
+    MessageDeletedEvent,
+    StaticSelectAction,
+    subtype,
+} from '@slack/bolt'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 import {Transactional} from 'typeorm-transactional'
@@ -12,7 +19,14 @@ import {UserService} from 'src/user/user.service'
 import {RespondService} from '../respond/respond.service'
 import {PlainTextOption} from '@slack/bolt'
 import {SlackException} from '../common/exceptions/slack.exception'
-import {SlackActionArgs, SlackCommandArgs, SlackReactionAddEventArgs, SlackMessageArgs, SlackViewSubmitArgs, SlackReactionRemoveEventArgs} from './slack.type'
+import {
+    SlackActionArgs,
+    SlackCommandArgs,
+    SlackReactionAddEventArgs,
+    SlackMessageArgs,
+    SlackViewSubmitArgs,
+    SlackReactionRemoveEventArgs,
+} from './slack.type'
 import {User} from '../user/entities/user.entity'
 import {SlackErrorHandler} from '../common/decorators/slackErrorHandler.decorator'
 import {Cron, CronExpression} from '@nestjs/schedule'
@@ -51,10 +65,16 @@ export class SlackService {
         this.slackBotInstance.event('reaction_added', args => this.onEmojiRespond(args))
         this.slackBotInstance.event('reaction_removed', args => this.onEmojiRemove(args))
 
-        this.slackBotInstance.action('coretime_start_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeStart'}))
-        this.slackBotInstance.action('coretime_end_change', args => this.onCoretimeChange({...args, columnType: 'coreTimeEnd'}))
+        this.slackBotInstance.action('coretime_start_change', args =>
+            this.onCoretimeChange({...args, columnType: 'coreTimeStart'}),
+        )
+        this.slackBotInstance.action('coretime_end_change', args =>
+            this.onCoretimeChange({...args, columnType: 'coreTimeEnd'}),
+        )
 
-        this.slackBotInstance.view('max_respond_time_view', args => this.onRespondTimeViewSubmit(args))
+        this.slackBotInstance.view('max_respond_time_view', args =>
+            this.onRespondTimeViewSubmit(args),
+        )
         this.slackBotInstance.view('statistics_view', args => this.onStatisticsViewSubmit(args))
 
         this.slackBotInstance
@@ -79,7 +99,9 @@ export class SlackService {
             scope = `${response.callClass}.${response.callMethod}`
         } else scope = `${SlackService.name}.unhandledException`
 
-        return this.discordService.sendMessage(error.message, scope, [{name: 'stack', value: error.stack?.substring(0, 1024) || ''}])
+        return this.discordService.sendMessage(error.message, scope, [
+            {name: 'stack', value: error.stack?.substring(0, 1024) || ''},
+        ])
     }
 
     @Cron(CronExpression.MONDAY_TO_FRIDAY_AT_12PM)
@@ -113,19 +135,31 @@ export class SlackService {
 
         await say({
             blocks: [
-                {type: 'section', text: {type: 'mrkdwn', text: `:stopwatch: current core time is between ${team.coreTimeStart} ~ ${team.coreTimeEnd}`}},
+                {
+                    type: 'section',
+                    text: {
+                        type: 'mrkdwn',
+                        text: `:stopwatch: current core time is between ${team.coreTimeStart} ~ ${team.coreTimeEnd}`,
+                    },
+                },
                 {
                     type: 'actions',
                     elements: [
                         {
                             type: 'static_select',
-                            initial_option: {text: {type: 'plain_text', text: team.coreTimeStart.toString()}, value: team.coreTimeStart.toString()},
+                            initial_option: {
+                                text: {type: 'plain_text', text: team.coreTimeStart.toString()},
+                                value: team.coreTimeStart.toString(),
+                            },
                             options: options,
                             action_id: 'coretime_start_change',
                         },
                         {
                             type: 'static_select',
-                            initial_option: {text: {type: 'plain_text', text: team.coreTimeEnd.toString()}, value: team.coreTimeEnd.toString()},
+                            initial_option: {
+                                text: {type: 'plain_text', text: team.coreTimeEnd.toString()},
+                                value: team.coreTimeEnd.toString(),
+                            },
                             options: options,
                             action_id: 'coretime_end_change',
                         },
@@ -166,9 +200,16 @@ export class SlackService {
                             action_id: 'number_input-action',
                             min_value: '180',
                             max_value: '1800',
-                            placeholder: {type: 'plain_text', text: '최대로 설정할 반응 시간을 초단위로 입력'},
+                            placeholder: {
+                                type: 'plain_text',
+                                text: '최대로 설정할 반응 시간을 초단위로 입력',
+                            },
                         },
-                        label: {type: 'plain_text', text: `:stopwatch: current max respond time is ${team.maxRespondTime} (seconds)`, emoji: true},
+                        label: {
+                            type: 'plain_text',
+                            text: `:stopwatch: current max respond time is ${team.maxRespondTime} (seconds)`,
+                            emoji: true,
+                        },
                     },
                 ],
                 submit: {type: 'plain_text', text: 'Submit'},
@@ -193,7 +234,11 @@ export class SlackService {
         }
 
         const monthOptions: PlainTextOption[] = []
-        for (let month = 1; month < 12; month++) monthOptions.push({text: {type: 'plain_text', text: month.toString()}, value: month.toString()})
+        for (let month = 1; month < 12; month++)
+            monthOptions.push({
+                text: {type: 'plain_text', text: month.toString()},
+                value: month.toString(),
+            })
 
         await client.views.open({
             token: this.configService.getSlackConfig().TOKEN,
@@ -208,7 +253,10 @@ export class SlackService {
                         block_id: 'year_select_block',
                         element: {
                             type: 'static_select',
-                            initial_option: {text: {type: 'plain_text', text: currentYear.toString()}, value: currentYear.toString()},
+                            initial_option: {
+                                text: {type: 'plain_text', text: currentYear.toString()},
+                                value: currentYear.toString(),
+                            },
                             options: yearOptions,
                             action_id: 'year_select_action',
                         },
@@ -219,7 +267,10 @@ export class SlackService {
                         block_id: 'month_select_block',
                         element: {
                             type: 'static_select',
-                            initial_option: {text: {type: 'plain_text', text: currentMonth.toString()}, value: currentMonth.toString()},
+                            initial_option: {
+                                text: {type: 'plain_text', text: currentMonth.toString()},
+                                value: currentMonth.toString(),
+                            },
                             options: monthOptions,
                             action_id: 'month_select_action',
                         },
@@ -231,11 +282,23 @@ export class SlackService {
                         element: {
                             type: 'static_select',
                             initial_option: {
-                                text: {type: 'plain_text', text: channels.filter(e => e.channelId === body.channel_id)[0].name},
+                                text: {
+                                    type: 'plain_text',
+                                    text: channels.filter(e => e.channelId === body.channel_id)[0]
+                                        .name,
+                                },
                                 value: body.channel_id,
                             },
                             options: channels.flatMap(
-                                (channel, idx): Array<PlainTextOption> => (idx < 100 ? [{text: {type: 'plain_text', text: channel.name}, value: channel.channelId}] : []),
+                                (channel, idx): Array<PlainTextOption> =>
+                                    idx < 100
+                                        ? [
+                                              {
+                                                  text: {type: 'plain_text', text: channel.name},
+                                                  value: channel.channelId,
+                                              },
+                                          ]
+                                        : [],
                             ),
                             action_id: 'channel_select_action',
                         },
@@ -257,7 +320,11 @@ export class SlackService {
         const value = +action.selected_option.value
         await this.teamService.updateTeamBySlackId(context.teamId, {[columnType]: value})
 
-        await say(`core time ${columnType === 'coreTimeStart' ? 'start' : 'end'} hour changed to ${action.selected_option.value}`)
+        await say(
+            `core time ${columnType === 'coreTimeStart' ? 'start' : 'end'} hour changed to ${
+                action.selected_option.value
+            }`,
+        )
         return ack()
     }
 
@@ -282,7 +349,9 @@ export class SlackService {
             return
         }
 
-        const channelMembersResponse = await client.conversations.members({channel: message.channel})
+        const channelMembersResponse = await client.conversations.members({
+            channel: message.channel,
+        })
         if (!channelMembersResponse.ok) throw new SlackException('Slack api error - channel member')
 
         const channelMembers = channelMembersResponse.members || []
@@ -307,7 +376,10 @@ export class SlackService {
             return
         }
 
-        const parentMessage = await this.messageService.findByChannelIdAndTimestamp(message.channel, message.thread_ts as string)
+        const parentMessage = await this.messageService.findByChannelIdAndTimestamp(
+            message.channel,
+            message.thread_ts as string,
+        )
         if (!parentMessage) throw new SlackException('parent message not found')
 
         if (parentMessage.user.slackId === message.user) {
@@ -327,7 +399,11 @@ export class SlackService {
 
     @SlackErrorHandler()
     @Transactional()
-    private async onMessage(message: GenericMessageEvent, teamId: string, channelMembers: string[]) {
+    private async onMessage(
+        message: GenericMessageEvent,
+        teamId: string,
+        channelMembers: string[],
+    ) {
         if (!(await this.isCoreTime(teamId))) {
             this.logger.warn('Current time is not core-time')
             return
@@ -360,7 +436,15 @@ export class SlackService {
             const user = userMap.get(member)
             if (!user) return []
             if (msg.user.id === user.id) return []
-            return [this.respondService.makeRespond({channelId: channel.id, messageId: msg.id, teamId: user.team.id, userId: user.id, team: user.team})]
+            return [
+                this.respondService.makeRespond({
+                    channelId: channel.id,
+                    messageId: msg.id,
+                    teamId: user.team.id,
+                    userId: user.id,
+                    team: user.team,
+                }),
+            ]
         })
 
         const responds = await Promise.all(promises).then(e => e.flat())
@@ -386,7 +470,10 @@ export class SlackService {
         }
         if (event.item.type !== 'message') return
 
-        const targetMessage = await this.messageService.findByChannelIdAndTimestamp(event.item.channel, event.item.ts)
+        const targetMessage = await this.messageService.findByChannelIdAndTimestamp(
+            event.item.channel,
+            event.item.ts,
+        )
         if (!targetMessage) {
             this.logger.error('target message not found', event.item)
             return
@@ -415,8 +502,13 @@ export class SlackService {
             return
         }
 
-        const reactionsGetResponse = await this.slackBotInstance.client.reactions.get({channel: event.item.channel, timestamp: event.item.ts, full: true})
-        if (!reactionsGetResponse.message) throw new SlackException('message not found in ReactionGetResponse')
+        const reactionsGetResponse = await this.slackBotInstance.client.reactions.get({
+            channel: event.item.channel,
+            timestamp: event.item.ts,
+            full: true,
+        })
+        if (!reactionsGetResponse.message)
+            throw new SlackException('message not found in ReactionGetResponse')
 
         const reactions = reactionsGetResponse.message.reactions
         if (!reactions) {
@@ -435,7 +527,10 @@ export class SlackService {
     @Transactional()
     private async onRespondTimeViewSubmit({ack, context, view, client, body}: SlackViewSubmitArgs) {
         if (!context.teamId) {
-            await client.chat.postMessage({text: "team doesn't exist in our database yet", channel: body.user.id})
+            await client.chat.postMessage({
+                text: "team doesn't exist in our database yet",
+                channel: body.user.id,
+            })
             return ack()
         }
 
@@ -444,16 +539,23 @@ export class SlackService {
 
         await this.teamService.updateTeamBySlackId(context.teamId, {maxRespondTime: +inputValue})
 
-        await client.chat.postMessage({text: 'max respond time is now ' + inputValue, channel: body.user.id})
+        await client.chat.postMessage({
+            text: 'max respond time is now ' + inputValue,
+            channel: body.user.id,
+        })
         return ack()
     }
 
     @SlackErrorHandler()
     @Transactional()
     private async onStatisticsViewSubmit({ack, client, payload}: SlackViewSubmitArgs) {
-        const year = payload.state.values['year_select_block']['year_select_action'].selected_option?.value
-        const month = payload.state.values['month_select_block']['month_select_action'].selected_option?.value
-        const channel = payload.state.values['channel_select_block']['channel_select_action'].selected_option?.value
+        const year =
+            payload.state.values['year_select_block']['year_select_action'].selected_option?.value
+        const month =
+            payload.state.values['month_select_block']['month_select_action'].selected_option?.value
+        const channel =
+            payload.state.values['channel_select_block']['channel_select_action'].selected_option
+                ?.value
         if (!channel || !year || !month) throw new SlackException('invalid input value(s)')
 
         const statistics = await this.respondService.getStatistics(payload.team_id, +year, +month)
@@ -461,10 +563,17 @@ export class SlackService {
         const blocks = statistics.map((user: any, idx: number) => {
             return {
                 type: 'section',
-                text: {type: 'mrkdwn', text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${user.average} seconds\n Ipsum Lorem ipsum`},
+                text: {
+                    type: 'mrkdwn',
+                    text: `${idx + 1}. *${user.name}(${user.realName})*\n:stopwatch: average ${
+                        user.average
+                    } seconds\n Ipsum Lorem ipsum`,
+                },
                 accessory: {
                     type: 'image',
-                    image_url: user.profileImage || 'https://cdn.mos.cms.futurecdn.net/SDDw7CnuoUGax6x9mTo7dd-1920-80.jpg.webp',
+                    image_url:
+                        user.profileImage ||
+                        'https://cdn.mos.cms.futurecdn.net/SDDw7CnuoUGax6x9mTo7dd-1920-80.jpg.webp',
                     alt_text: 'alt text for image',
                 },
             }
@@ -473,7 +582,11 @@ export class SlackService {
         await client.chat.postMessage({
             text: ':chart_with_upwards_trend:',
             icon_emoji: 'true',
-            blocks: [{type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}}, {type: 'divider'}, ...blocks],
+            blocks: [
+                {type: 'section', text: {type: 'mrkdwn', text: `*${year}년 ${month}월* 통계`}},
+                {type: 'divider'},
+                ...blocks,
+            ],
             channel,
         })
         return ack()
@@ -483,7 +596,8 @@ export class SlackService {
     @Transactional()
     public async fetchTeams() {
         const response = await this.slackBotInstance.client.team.info()
-        if (!response.ok || !response.team || !response.team.id) throw new SlackException('slack api error')
+        if (!response.ok || !response.team || !response.team.id)
+            throw new SlackException('slack api error')
 
         const check = await this.teamService.findOneBySlackId(response.team.id)
         if (check) {
@@ -506,8 +620,16 @@ export class SlackService {
 
         const toCreate: Channel[] = []
         for (const channel of response.channels) {
-            if (!channel.id || !channel.is_channel || channel.is_archived || !channel.context_team_id) {
-                this.logger.error('channel is not qualified (is not channel, is archived, id not found, channel context team id not found)', channel)
+            if (
+                !channel.id ||
+                !channel.is_channel ||
+                channel.is_archived ||
+                !channel.context_team_id
+            ) {
+                this.logger.error(
+                    'channel is not qualified (is not channel, is archived, id not found, channel context team id not found)',
+                    channel,
+                )
                 continue
             }
 
@@ -542,14 +664,25 @@ export class SlackService {
 
         const toCreate: User[] = []
         for (const user of response.members) {
-            if (user.is_bot || user.is_restricted || user.is_ultra_restricted || !user.is_email_confirmed || !user.id || !user.team_id) {
+            if (
+                user.is_bot ||
+                user.is_restricted ||
+                user.is_ultra_restricted ||
+                !user.is_email_confirmed ||
+                !user.id ||
+                !user.team_id
+            ) {
                 this.logger.error('user is not qualified', {id: user.id, name: user.name})
                 continue
             }
 
             const check = await this.userService.findBySlackId(user.id)
             if (check) {
-                if (check.name !== user.name || check.realName !== user.real_name || check.profileImage !== user.profile?.image_original) {
+                if (
+                    check.name !== user.name ||
+                    check.realName !== user.real_name ||
+                    check.profileImage !== user.profile?.image_original
+                ) {
                     await this.userService.update(check.id, {
                         name: check.name,
                         profileImage: user.profile?.image_original || null,

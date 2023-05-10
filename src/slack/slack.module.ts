@@ -10,7 +10,15 @@ import {UserModule} from 'src/user/user.module'
 import {RespondModule} from '../respond/respond.module'
 
 @Module({
-    imports: [AppConfigModule, DiscordModule, UserModule, TeamModule, ChannelModule, MessageModule, RespondModule],
+    imports: [
+        AppConfigModule,
+        DiscordModule,
+        UserModule,
+        TeamModule,
+        ChannelModule,
+        MessageModule,
+        RespondModule,
+    ],
     providers: [SlackService],
     exports: [SlackService],
     controllers: [SlackController],

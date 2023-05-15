@@ -1,6 +1,8 @@
 FROM node:20.0.0-alpine as development
 ENV NODE_ENV=development
 
+RUN npm i -g pnpm
+
 WORKDIR /usr/src/app
 
 COPY package.json ./

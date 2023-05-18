@@ -1,9 +1,9 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete} from '@nestjs/common'
+import {Controller, Get, Post, Body, Patch, Param, Delete, Query} from '@nestjs/common'
 import {RespondService} from './respond.service'
 import {CreateRespondDto} from './dto/create-respond.dto'
 import {UpdateRespondDto} from './dto/update-respond.dto'
 
-@Controller('respond')
+@Controller('responds')
 export class RespondController {
     constructor(private readonly respondService: RespondService) {}
 
@@ -17,17 +17,28 @@ export class RespondController {
         return this.respondService.findAll()
     }
 
-    @Get(':id')
+    @Get('/statistics')
+    getStatistics(
+        @Query('teamId') teamId: string,
+        @Query('year') year: number,
+        @Query('month') month: number,
+        @Query('limit') limit: number,
+    ) {
+        console.log(year, month, limit)
+        return this.respondService.getStatistics(teamId, year, month, limit)
+    }
+
+    @Get('/:id')
     findOne(@Param('id') id: string) {
         return this.respondService.findOne(+id)
     }
 
-    @Patch(':id')
+    @Patch('/:id')
     update(@Param('id') id: string, @Body() updateRespondDto: UpdateRespondDto) {
         return this.respondService.update(updateRespondDto)
     }
 
-    @Delete(':id')
+    @Delete('/:id')
     remove(@Param('id') id: string) {
         return this.respondService.remove(+id)
     }

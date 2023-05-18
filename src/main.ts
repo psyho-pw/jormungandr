@@ -18,7 +18,7 @@ async function bootstrap() {
     app.set('trust proxy', true)
     app.use(helmet())
     app.setGlobalPrefix('api')
-    app.enableVersioning({type: VersioningType.URI})
+    app.enableVersioning({defaultVersion: '1', type: VersioningType.URI})
     app.enableCors(serverConfig.CORS)
     app.useGlobalPipes(
         new ValidationPipe({transform: true, transformOptions: {enableImplicitConversion: true}}),

@@ -87,7 +87,7 @@ export class RespondService {
     }
 
     @Transactional()
-    public async getStatistics(teamId: string, year: number, month: number) {
+    public async getStatistics(teamId: string, year: number, month: number, limit?: number) {
         return this.respondRepository.query(
             `
             SELECT *
@@ -99,9 +99,9 @@ export class RespondService {
             ) as avgTable 
             JOIN user on avgTable.userId = user.id
             ORDER BY average, userId
-            LIMIT 3;
+            LIMIT ?;
         `,
-            [teamId, `${year}-${month}`],
+            [teamId, `${year}-${month}`, limit || 3],
         )
     }
 

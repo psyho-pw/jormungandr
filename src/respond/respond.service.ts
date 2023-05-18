@@ -121,6 +121,7 @@ export class RespondService {
             )
             return
         }
+
         return this.respondRepository.update(targetRespond.id, {
             timeTaken: targetRespond.team.maxRespondTime,
         })

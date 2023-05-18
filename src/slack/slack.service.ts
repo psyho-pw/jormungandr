@@ -376,6 +376,8 @@ export class SlackService {
             return
         }
 
+        this.logger.verbose('onThreadMessage triggered')
+
         const parentMessage = await this.messageService.findByChannelIdAndTimestamp(
             message.channel,
             message.thread_ts as string,
@@ -464,6 +466,8 @@ export class SlackService {
     @SlackErrorHandler()
     @Transactional()
     private async onEmojiRespond({event, context}: SlackReactionAddEventArgs) {
+        this.logger.debug('onEmojiRespond triggered')
+
         if (!(await this.isCoreTime(context.teamId || ''))) {
             this.logger.warn('Current time is not core-time')
             return
@@ -485,18 +489,20 @@ export class SlackService {
         }
 
         // const timeTaken = +event.event_ts - +targetMessage.timestamp
-        await this.respondService.update({
+        const queryRes = await this.respondService.update({
             messageId: targetMessage.id,
             userId: targetMessage.user.id,
             timestamp: event.event_ts,
             // timeTaken,
             slackTeamId: targetMessage.team.teamId,
         })
+        this.logger.debug('query result', queryRes)
     }
 
     @SlackErrorHandler()
     @Transactional()
     private async onEmojiRemove({event}: SlackReactionRemoveEventArgs) {
+        this.logger.debug('onEmojiRemove triggered')
         if (event.item.type !== 'message') {
             this.logger.verbose('removed event target is not a message. skipping...')
             return
@@ -509,6 +515,11 @@ export class SlackService {
         })
         if (!reactionsGetResponse.message)
             throw new SlackException('message not found in ReactionGetResponse')
+
+        if (event.user === reactionsGetResponse.message.user) {
+            this.logger.verbose('reaction removal to self. skipping...')
+            return
+        }
 
         const reactions = reactionsGetResponse.message.reactions
         if (!reactions) {

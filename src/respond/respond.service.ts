@@ -61,29 +61,42 @@ export class RespondService {
         const team = await this.teamService.findOneBySlackId(updateRespondDto.slackTeamId)
         if (!team) throw new NotFoundException('team not found')
 
-        return this.respondRepository
-            .createQueryBuilder('respond')
-            .update(Respond)
-            .set({
-                timestamp: updateRespondDto.timestamp,
-                // timeTaken: updateRespondDto.timeTaken,
-                timeTaken: () =>
-                    `(SELECT timestamp FROM \`message\` WHERE id = message.id LIMIT 1) - ${+updateRespondDto.timestamp}`,
-            })
-            .where(
-                `
-                    user.id = :userId
-                    AND message.id <= :messageId
-                    AND timeTaken = :maxRespondTime
-                    AND createdAt >= DATE_SUB(NOW(), INTERVAL :maxRespondTime SECOND)
-                `,
-                {
-                    userId: updateRespondDto.userId,
-                    messageId: updateRespondDto.messageId,
-                    maxRespondTime: team.maxRespondTime,
-                },
-            )
-            .execute()
+        return this.respondRepository.query(
+            `
+            UPDATE respond
+            SET timestamp = ?, timeTaken = ? - (SELECT timestamp FROM message WHERE id = respond.messageId LIMIT 1)
+            WHERE userId = ? AND messageId <= ? AND createdAt >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+        `,
+            [
+                updateRespondDto.timestamp,
+                updateRespondDto.timestamp,
+                updateRespondDto.userId,
+                updateRespondDto.messageId,
+                team.maxRespondTime,
+            ],
+        )
+        // return this.respondRepository
+        //     .createQueryBuilder('respond')
+        //     .update(Respond)
+        //     .set({
+        //         timestamp: updateRespondDto.timestamp,
+        //         // timeTaken: updateRespondDto.timeTaken,
+        //         timeTaken: () =>
+        //             `${+updateRespondDto.timestamp} - (SELECT timestamp FROM message WHERE id = message.id LIMIT 1)`,
+        //     })
+        //     .where(
+        //         `
+        //             user.id = :userId
+        //             AND message.id <= :messageId
+        //             AND createdAt >= DATE_SUB(NOW(), INTERVAL :maxRespondTime SECOND)
+        //         `,
+        //         {
+        //             userId: updateRespondDto.userId,
+        //             messageId: updateRespondDto.messageId,
+        //             maxRespondTime: team.maxRespondTime,
+        //         },
+        //     )
+        //     .execute()
     }
 
     @Transactional()

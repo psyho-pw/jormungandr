@@ -24,7 +24,6 @@ export class RespondController {
         @Query('month') month: number,
         @Query('limit') limit: number,
     ) {
-        console.log(year, month, limit)
         return this.respondService.getStatistics(teamId, year, month, limit)
     }
 

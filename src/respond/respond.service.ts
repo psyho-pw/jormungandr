@@ -52,15 +52,21 @@ export class RespondService {
     }
 
     @Transactional()
-    public async renewMaxRespond(teamId: number, maxRespondTime: number) {
-        return this.respondRepository.update({})
+    public async renewMaxRespond(
+        teamId: number,
+        previousMaxRespondTime: number,
+        maxRespondTime: number,
+    ) {
+        return this.respondRepository
+            .createQueryBuilder()
+            .update(Respond)
+            .set({timeTaken: maxRespondTime})
+            .where({timeTaken: previousMaxRespondTime})
+            .execute()
     }
 
     @Transactional()
     public async update(updateRespondDto: UpdateRespondDto) {
-        // const team = await this.teamService.findOneBySlackId(updateRespondDto.slackTeamId)
-        // if (!team) throw new NotFoundException('team not found')
-
         return this.respondRepository.query(
             `
             UPDATE respond

@@ -389,10 +389,12 @@ export class SlackService {
             return
         }
 
+        const user = await this.userService.findBySlackId(message.user)
+        if (!user) throw new SlackException('user not found by slackId')
         // const timeTaken = +message.ts - +parentMessage.timestamp
         return this.respondService.update({
             messageId: parentMessage.id,
-            userId: parentMessage.user.id,
+            userId: user.id,
             timestamp: message.ts,
             // timeTaken,
             slackTeamId: parentMessage.team.teamId,
@@ -488,10 +490,12 @@ export class SlackService {
             return
         }
 
+        const user = await this.userService.findBySlackId(event.user)
+        if (!user) throw new SlackException('user not found by slackId')
         // const timeTaken = +event.event_ts - +targetMessage.timestamp
         const queryRes = await this.respondService.update({
             messageId: targetMessage.id,
-            userId: targetMessage.user.id,
+            userId: user.id,
             timestamp: event.event_ts,
             // timeTaken,
             slackTeamId: targetMessage.team.teamId,

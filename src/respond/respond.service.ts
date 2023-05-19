@@ -62,8 +62,6 @@ export class RespondService {
         const team = await this.teamService.findOneBySlackId(updateRespondDto.slackTeamId)
         if (!team) throw new NotFoundException('team not found')
 
-        console.log(updateRespondDto)
-
         return this.respondRepository.query(
             `
             UPDATE respond

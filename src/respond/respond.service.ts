@@ -1,4 +1,4 @@
-import {Inject, Injectable, NotFoundException} from '@nestjs/common'
+import {Inject, Injectable} from '@nestjs/common'
 import {CreateRespondDto} from './dto/create-respond.dto'
 import {UpdateRespondDto} from './dto/update-respond.dto'
 import {InjectRepository} from '@nestjs/typeorm'
@@ -6,7 +6,6 @@ import {Respond} from './entities/respond.entity'
 import {Repository} from 'typeorm'
 import {Transactional} from 'typeorm-transactional'
 import {AppConfigService} from '../config/config.service'
-import {TeamService} from '../team/team.service'
 import {WINSTON_MODULE_PROVIDER} from 'nest-winston'
 import {Logger} from 'winston'
 
@@ -14,7 +13,6 @@ import {Logger} from 'winston'
 export class RespondService {
     constructor(
         private readonly configService: AppConfigService,
-        private readonly teamService: TeamService,
         @InjectRepository(Respond) private readonly respondRepository: Repository<Respond>,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {}
@@ -32,9 +30,6 @@ export class RespondService {
 
     @Transactional()
     public async create(createRespondDto: CreateRespondDto): Promise<Respond> {
-        const team = await this.teamService.findOne(createRespondDto.teamId)
-        if (!team) throw new NotFoundException('team not found')
-
         return this.respondRepository.save(this.makeRespond(createRespondDto))
     }
 
@@ -57,10 +52,21 @@ export class RespondService {
     }
 
     @Transactional()
-    public async update(updateRespondDto: UpdateRespondDto) {
-        const team = await this.teamService.findOneBySlackId(updateRespondDto.slackTeamId)
-        if (!team) throw new NotFoundException('team not found')
+    public async renewMaxRespond(
+        teamId: number,
+        previousMaxRespondTime: number,
+        maxRespondTime: number,
+    ) {
+        return this.respondRepository
+            .createQueryBuilder()
+            .update(Respond)
+            .set({timeTaken: maxRespondTime})
+            .where({timeTaken: previousMaxRespondTime})
+            .execute()
+    }
 
+    @Transactional()
+    public async update(updateRespondDto: UpdateRespondDto) {
         return this.respondRepository.query(
             `
             UPDATE respond
@@ -72,7 +78,7 @@ export class RespondService {
                 updateRespondDto.timestamp,
                 updateRespondDto.userId,
                 updateRespondDto.messageId,
-                team.maxRespondTime,
+                updateRespondDto.maxRespondTime,
             ],
         )
         // return this.respondRepository

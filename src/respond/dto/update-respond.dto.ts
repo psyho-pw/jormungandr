@@ -10,9 +10,9 @@ export class UpdateRespondDto {
     @IsString()
     timestamp: string
 
-    // @IsNumber()
-    // timeTaken: number
+    // @IsString()
+    // slackTeamId: string
 
-    @IsString()
-    slackTeamId: string
+    @IsNumber()
+    maxRespondTime: number
 }
